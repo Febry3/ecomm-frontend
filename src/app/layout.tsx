@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/provider/theme-provider"
 import { Urbanist } from 'next/font/google';
+import TanstackProviders from "./tanstack-provider"
 
 const _urbanist = Urbanist({ subsets: ["latin"] })
 
@@ -21,7 +22,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={_urbanist.className}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <TanstackProviders>
+          <ThemeProvider>{children}</ThemeProvider>
+        </TanstackProviders>
       </body>
     </html>
   )
