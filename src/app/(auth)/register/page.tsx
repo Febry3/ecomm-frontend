@@ -8,40 +8,43 @@ import { Separator } from "@/components/ui/separator"
 import { ThemeToggle } from "@/components/provider/theme-toggle"
 import { TrailingCursor } from "@/components/auth/trailling-cursor"
 import { CursorEye } from "@/components/auth/eye-cursor"
-import { useFormik } from 'formik'
-import * as Yup from 'yup'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
 
-const validationSchema = Yup.object({
-    username: Yup.string()
+const registerSchema = z.object({
+    username: z.string()
         .min(3, 'Must be at least 3 characters')
         .max(20, 'Must be 20 characters or less')
-        .matches(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers, and underscores')
-        .required('Username is required'),
-    firstName: Yup.string()
-        .max(15, 'Must be 15 characters or less')
-        .required('First name is required'),
-    lastName: Yup.string()
-        .max(20, 'Must be 20 characters or less')
-        .required('Last name is required'),
-    phone: Yup.string()
-        .matches(
-            /^\+?[1-9]\d{1,14}$/,
-            'Phone number is not valid (e.g., +628123456789)'
-        )
-        .optional(),
-    email: Yup.string()
-        .email('Invalid email address')
-        .required('Email is required'),
-    password: Yup.string()
-        .required('Password is required')
+        .regex(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers, and underscores'),
+    firstName: z.string()
+        .min(1, 'First name is required')
+        .max(15, 'Must be 15 characters or less'),
+    lastName: z.string()
+        .min(1, 'Last name is required')
+        .max(20, 'Must be 20 characters or less'),
+    phone: z.string()
+        .regex(/^\+?[1-9]\d{1,14}$/, 'Phone number is not valid (e.g., +628123456789)'),
+    email: z
+        .email('Invalid email address'),
+    password: z.string()
+        .min(1, 'Password is required')
         .min(6, 'Must be at least 6 characters')
 })
 
+type RegisterFormValues = z.infer<typeof registerSchema>;
+
 export default function RegisterPage() {
-    const formik = useFormik({
-        initialValues: {
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting }
+    } = useForm<RegisterFormValues>({
+        resolver: zodResolver(registerSchema),
+        defaultValues: {
             username: '',
             firstName: '',
             lastName: '',
@@ -49,17 +52,14 @@ export default function RegisterPage() {
             email: '',
             password: '',
         },
-        validationSchema: validationSchema,
-        onSubmit: (values, { setSubmitting }) => {
-            // This function runs when the form is valid and submitted
-            console.log('Form data:', values)
-            // Simulate an API call
-            setTimeout(() => {
-                alert(JSON.stringify(values, null, 2))
-                setSubmitting(false)
-            }, 1000)
-        },
     })
+
+    // 4. Create the submit handler
+    const onSubmit = async (values: RegisterFormValues) => {
+        console.log('Form data:', values)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log('Form submitted successfully:', JSON.stringify(values, null, 2))
+    }
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
@@ -94,7 +94,8 @@ export default function RegisterPage() {
                     {/* Right Column - Form Card */}
                     <div className="flex items-center justify-center">
                         <Card className="w-full bg-card/50 border-border backdrop-blur-xl shadow-lg rounded-lg">
-                            <form onSubmit={formik.handleSubmit}>
+                            {/* 5. Hook up the form submission */}
+                            <form onSubmit={handleSubmit(onSubmit)}>
                                 <CardContent className="space-y-4 pt-6">
                                     {/* Google Button */}
                                     <Button
@@ -137,24 +138,21 @@ export default function RegisterPage() {
                                             </Label>
                                             <Input
                                                 id="username"
-                                                name="username" // 'name' attribute is crucial for formik
                                                 placeholder="@username"
-                                                // Connect formik state
-                                                onChange={formik.handleChange}
-                                                onBlur={formik.handleBlur}
-                                                value={formik.values.username}
-                                                // Apply error styling
+                                                // 6. Register the input
+                                                {...register('username')}
+                                                // 7. Apply error styling
                                                 className={cn(
                                                     'bg-muted/30 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 rounded-md h-8 text-sm',
-                                                    formik.touched.username && formik.errors.username
+                                                    errors.username
                                                         ? 'border-red-500 focus:border-red-500'
                                                         : ''
                                                 )}
                                             />
-                                            {/* Show error message */}
-                                            {formik.touched.username && formik.errors.username ? (
+                                            {/* 8. Show error message */}
+                                            {errors.username ? (
                                                 <p className="text-xs text-red-500">
-                                                    {formik.errors.username}
+                                                    {errors.username.message}
                                                 </p>
                                             ) : null}
                                         </div>
@@ -170,21 +168,18 @@ export default function RegisterPage() {
                                                 </Label>
                                                 <Input
                                                     id="firstName"
-                                                    name="firstName"
                                                     placeholder="Asep"
-                                                    onChange={formik.handleChange}
-                                                    onBlur={formik.handleBlur}
-                                                    value={formik.values.firstName}
+                                                    {...register('firstName')}
                                                     className={cn(
                                                         'bg-muted/30 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 rounded-md h-8 text-sm',
-                                                        formik.touched.firstName && formik.errors.firstName
+                                                        errors.firstName
                                                             ? 'border-red-500 focus:border-red-500'
                                                             : ''
                                                     )}
                                                 />
-                                                {formik.touched.firstName && formik.errors.firstName ? (
+                                                {errors.firstName ? (
                                                     <p className="text-xs text-red-500">
-                                                        {formik.errors.firstName}
+                                                        {errors.firstName.message}
                                                     </p>
                                                 ) : null}
                                             </div>
@@ -197,21 +192,18 @@ export default function RegisterPage() {
                                                 </Label>
                                                 <Input
                                                     id="lastName"
-                                                    name="lastName"
                                                     placeholder="Surasep"
-                                                    onChange={formik.handleChange}
-                                                    onBlur={formik.handleBlur}
-                                                    value={formik.values.lastName}
+                                                    {...register('lastName')}
                                                     className={cn(
                                                         'bg-muted/30 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 rounded-md h-8 text-sm',
-                                                        formik.touched.lastName && formik.errors.lastName
+                                                        errors.lastName
                                                             ? 'border-red-500 focus:border-red-500'
                                                             : ''
                                                     )}
                                                 />
-                                                {formik.touched.lastName && formik.errors.lastName ? (
+                                                {errors.lastName ? (
                                                     <p className="text-xs text-red-500">
-                                                        {formik.errors.lastName}
+                                                        {errors.lastName.message}
                                                     </p>
                                                 ) : null}
                                             </div>
@@ -227,22 +219,19 @@ export default function RegisterPage() {
                                             </Label>
                                             <Input
                                                 id="phone"
-                                                name="phone"
                                                 type="tel"
                                                 placeholder="+62 800000000"
-                                                onChange={formik.handleChange}
-                                                onBlur={formik.handleBlur}
-                                                value={formik.values.phone}
+                                                {...register('phone')}
                                                 className={cn(
                                                     'bg-muted/30 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 rounded-md h-8 text-sm',
-                                                    formik.touched.phone && formik.errors.phone
+                                                    errors.phone
                                                         ? 'border-red-500 focus:border-red-500'
                                                         : ''
                                                 )}
                                             />
-                                            {formik.touched.phone && formik.errors.phone ? (
+                                            {errors.phone ? (
                                                 <p className="text-xs text-red-500">
-                                                    {formik.errors.phone}
+                                                    {errors.phone.message}
                                                 </p>
                                             ) : null}
                                         </div>
@@ -257,22 +246,19 @@ export default function RegisterPage() {
                                             </Label>
                                             <Input
                                                 id="email"
-                                                name="email"
                                                 type="email"
                                                 placeholder="asep@example.com"
-                                                onChange={formik.handleChange}
-                                                onBlur={formik.handleBlur}
-                                                value={formik.values.email}
+                                                {...register('email')}
                                                 className={cn(
                                                     'bg-muted/30 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 rounded-md h-8 text-sm',
-                                                    formik.touched.email && formik.errors.email
+                                                    errors.email
                                                         ? 'border-red-500 focus:border-red-500'
                                                         : ''
                                                 )}
                                             />
-                                            {formik.touched.email && formik.errors.email ? (
+                                            {errors.email ? (
                                                 <p className="text-xs text-red-500">
-                                                    {formik.errors.email}
+                                                    {errors.email.message}
                                                 </p>
                                             ) : null}
                                         </div>
@@ -280,29 +266,26 @@ export default function RegisterPage() {
                                         {/* Password */}
                                         <div className="space-y-1.5">
                                             <Label
-                                                htmlFor="email"
+                                                htmlFor="password"
                                                 className="text-xs font-medium text-foreground"
                                             >
                                                 Password
                                             </Label>
                                             <Input
                                                 id="password"
-                                                name="password"
                                                 type="password"
                                                 placeholder="admin123"
-                                                onChange={formik.handleChange}
-                                                onBlur={formik.handleBlur}
-                                                value={formik.values.password}
+                                                {...register('password')}
                                                 className={cn(
                                                     'bg-muted/30 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 rounded-md h-8 text-sm',
-                                                    formik.touched.password && formik.errors.password
+                                                    errors.password
                                                         ? 'border-red-500 focus:border-red-500'
                                                         : ''
                                                 )}
                                             />
-                                            {formik.touched.password && formik.errors.password ? (
+                                            {errors.password ? (
                                                 <p className="text-xs text-red-500">
-                                                    {formik.errors.password}
+                                                    {errors.password.message}
                                                 </p>
                                             ) : null}
                                         </div>
@@ -313,10 +296,10 @@ export default function RegisterPage() {
                                     {/* Primary Button */}
                                     <Button
                                         type="submit"
-                                        disabled={formik.isSubmitting}
-                                        className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-md shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-50"
+                                        disabled={isSubmitting}
+                                        className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-md shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-50 cursor-pointer"
                                     >
-                                        {formik.isSubmitting ? 'Creating...' : 'Create account'}
+                                        {isSubmitting ? 'Creating...' : 'Create account'}
                                     </Button>
 
                                     {/* Legal Text */}

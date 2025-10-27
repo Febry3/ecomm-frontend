@@ -8,36 +8,40 @@ import { Separator } from "@/components/ui/separator"
 import { ThemeToggle } from "@/components/provider/theme-toggle"
 import { TrailingCursor } from "@/components/auth/trailling-cursor"
 import { CursorEye } from "@/components/auth/eye-cursor"
-import { useFormik } from 'formik'
-import * as Yup from 'yup'
+import z from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
 
-const validationSchema = Yup.object({
-    email: Yup.string()
-        .email('Invalid email address')
-        .required('Email is required'),
-    password: Yup.string()
-        .required('Password is required')
+const loginSchema = z.object({
+    email: z
+        .email('Invalid email address'),
+    password: z.string()
+        .min(1, 'Password is required')
+        .min(6, 'Must be at least 6 characters')
 })
 
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 export default function LoginPage() {
-    const formik = useFormik({
-        initialValues: {
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting }
+    } = useForm<LoginFormValues>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
             email: '',
             password: '',
         },
-        validationSchema: validationSchema,
-        onSubmit: (values, { setSubmitting }) => {
-            // This function runs when the form is valid and submitted
-            console.log('Form data:', values)
-            // Simulate an API call
-            setTimeout(() => {
-                alert(JSON.stringify(values, null, 2))
-                setSubmitting(false)
-            }, 1000)
-        },
     })
+
+    const onSubmit = async (values: LoginFormValues) => {
+        console.log('Form data:', values)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log('Form submitted successfully:', JSON.stringify(values, null, 2))
+    }
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
@@ -55,7 +59,7 @@ export default function LoginPage() {
                             <CursorEye />
                             <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
                                 <span className="text-sm font-medium text-primary">
-                                    Already have an account?
+                                    Welcome back!
                                 </span>
                             </div>
                         </div>
@@ -64,7 +68,7 @@ export default function LoginPage() {
                                 Login to your account
                             </h1>
                             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-                                Join us today and unlock a world of possibilities.
+                                Enter your credentials below to access your dashboard.
                             </p>
                         </div>
                     </div>
@@ -72,7 +76,8 @@ export default function LoginPage() {
                     {/* Right Column - Form Card */}
                     <div className="flex items-center justify-center">
                         <Card className="w-full bg-card/50 border-border backdrop-blur-xl shadow-lg rounded-lg">
-                            <form onSubmit={formik.handleSubmit}>
+                            {/* Hook up the form submission */}
+                            <form onSubmit={handleSubmit(onSubmit)}>
                                 <CardContent className="space-y-4 pt-6">
                                     {/* Google Button */}
                                     <Button
@@ -115,51 +120,47 @@ export default function LoginPage() {
                                             </Label>
                                             <Input
                                                 id="email"
-                                                name="email"
                                                 type="email"
                                                 placeholder="asep@example.com"
-                                                onChange={formik.handleChange}
-                                                onBlur={formik.handleBlur}
-                                                value={formik.values.email}
+                                                {...register('email')}
                                                 className={cn(
                                                     'bg-muted/30 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 rounded-md h-8 text-sm',
-                                                    formik.touched.email && formik.errors.email
+                                                    errors.email
                                                         ? 'border-red-500 focus:border-red-500'
                                                         : ''
                                                 )}
                                             />
-                                            {formik.touched.email && formik.errors.email ? (
+
+                                            {errors.email ? (
                                                 <p className="text-xs text-red-500">
-                                                    {formik.errors.email}
+                                                    {errors.email.message}
                                                 </p>
                                             ) : null}
                                         </div>
+
                                         {/* Password */}
                                         <div className="space-y-1.5">
                                             <Label
-                                                htmlFor="email"
+                                                htmlFor="password"
                                                 className="text-xs font-medium text-foreground"
                                             >
                                                 Password
                                             </Label>
                                             <Input
                                                 id="password"
-                                                name="password"
                                                 type="password"
                                                 placeholder="admin123"
-                                                onChange={formik.handleChange}
-                                                onBlur={formik.handleBlur}
-                                                value={formik.values.password}
+                                                {...register('password')}
                                                 className={cn(
                                                     'bg-muted/30 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 rounded-md h-8 text-sm',
-                                                    formik.touched.password && formik.errors.password
+                                                    errors.password
                                                         ? 'border-red-500 focus:border-red-500'
                                                         : ''
                                                 )}
                                             />
-                                            {formik.touched.password && formik.errors.password ? (
+                                            {errors.password ? (
                                                 <p className="text-xs text-red-500">
-                                                    {formik.errors.password}
+                                                    {errors.password.message}
                                                 </p>
                                             ) : null}
                                         </div>
@@ -170,10 +171,10 @@ export default function LoginPage() {
                                     {/* Primary Button */}
                                     <Button
                                         type="submit"
-                                        disabled={formik.isSubmitting}
-                                        className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-md shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-50"
+                                        disabled={isSubmitting}
+                                        className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-md shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-50 cursor-pointer"
                                     >
-                                        {formik.isSubmitting ? 'Creating...' : 'Create account'}
+                                        {isSubmitting ? 'Signing in...' : 'Sign in'}
                                     </Button>
 
                                     {/* Legal Text */}
@@ -194,10 +195,10 @@ export default function LoginPage() {
                                         </a>
                                     </p>
 
-                                    {/* Sign In Link */}
+                                    {/* Sign Up Link */}
                                     <div className="text-center text-xs">
                                         <span className="text-muted-foreground">
-                                            Didn't have any account?{' '}
+                                            Don't have an account?{' '}
                                         </span>
                                         <a
                                             href="/register"
