@@ -28,17 +28,18 @@ const validationSchema = Yup.object({
     phone: Yup.string()
         .matches(
             /^\+?[1-9]\d{1,14}$/,
-            'Phone number is not valid (e.g., +15550000000)'
+            'Phone number is not valid (e.g., +628123456789)'
         )
         .optional(),
     email: Yup.string()
         .email('Invalid email address')
         .required('Email is required'),
+    password: Yup.string()
+        .required('Password is required')
+        .min(6, 'Must be at least 6 characters')
 })
 
 export default function RegisterPage() {
-    // --- Formik Hook ---
-    // We initialize formik to manage our form state, validation, and submission.
     const formik = useFormik({
         initialValues: {
             username: '',
@@ -46,6 +47,7 @@ export default function RegisterPage() {
             lastName: '',
             phone: '',
             email: '',
+            password: '',
         },
         validationSchema: validationSchema,
         onSubmit: (values, { setSubmitting }) => {
@@ -61,7 +63,6 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
-            {/* These are stubbed components, replace with your real ones */}
             <TrailingCursor />
             <ThemeToggle />
 
@@ -93,12 +94,11 @@ export default function RegisterPage() {
                     {/* Right Column - Form Card */}
                     <div className="flex items-center justify-center">
                         <Card className="w-full bg-card/50 border-border backdrop-blur-xl shadow-lg rounded-lg">
-                            {/* We wrap the form content in a <form> tag and add formik's handleSubmit */}
                             <form onSubmit={formik.handleSubmit}>
                                 <CardContent className="space-y-4 pt-6">
                                     {/* Google Button */}
                                     <Button
-                                        type="button" // Important: set to 'button' to prevent form submission
+                                        type="button"
                                         variant="outline"
                                         className="w-full h-9 border-border hover:bg-muted text-foreground bg-transparent text-sm"
                                     >
@@ -171,7 +171,7 @@ export default function RegisterPage() {
                                                 <Input
                                                     id="firstName"
                                                     name="firstName"
-                                                    placeholder="John"
+                                                    placeholder="Asep"
                                                     onChange={formik.handleChange}
                                                     onBlur={formik.handleBlur}
                                                     value={formik.values.firstName}
@@ -198,7 +198,7 @@ export default function RegisterPage() {
                                                 <Input
                                                     id="lastName"
                                                     name="lastName"
-                                                    placeholder="Doe"
+                                                    placeholder="Surasep"
                                                     onChange={formik.handleChange}
                                                     onBlur={formik.handleBlur}
                                                     value={formik.values.lastName}
@@ -229,7 +229,7 @@ export default function RegisterPage() {
                                                 id="phone"
                                                 name="phone"
                                                 type="tel"
-                                                placeholder="+1 (555) 000-0000"
+                                                placeholder="+62 800000000"
                                                 onChange={formik.handleChange}
                                                 onBlur={formik.handleBlur}
                                                 value={formik.values.phone}
@@ -259,7 +259,7 @@ export default function RegisterPage() {
                                                 id="email"
                                                 name="email"
                                                 type="email"
-                                                placeholder="john@example.com"
+                                                placeholder="asep@example.com"
                                                 onChange={formik.handleChange}
                                                 onBlur={formik.handleBlur}
                                                 value={formik.values.email}
@@ -276,14 +276,44 @@ export default function RegisterPage() {
                                                 </p>
                                             ) : null}
                                         </div>
+
+                                        {/* Password */}
+                                        <div className="space-y-1.5">
+                                            <Label
+                                                htmlFor="email"
+                                                className="text-xs font-medium text-foreground"
+                                            >
+                                                Password
+                                            </Label>
+                                            <Input
+                                                id="password"
+                                                name="password"
+                                                type="password"
+                                                placeholder="admin123"
+                                                onChange={formik.handleChange}
+                                                onBlur={formik.handleBlur}
+                                                value={formik.values.password}
+                                                className={cn(
+                                                    'bg-muted/30 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 rounded-md h-8 text-sm',
+                                                    formik.touched.password && formik.errors.password
+                                                        ? 'border-red-500 focus:border-red-500'
+                                                        : ''
+                                                )}
+                                            />
+                                            {formik.touched.password && formik.errors.password ? (
+                                                <p className="text-xs text-red-500">
+                                                    {formik.errors.password}
+                                                </p>
+                                            ) : null}
+                                        </div>
                                     </div>
                                 </CardContent>
 
                                 <CardFooter className="flex flex-col gap-3 pt-4">
                                     {/* Primary Button */}
                                     <Button
-                                        type="submit" // Set type to 'submit'
-                                        disabled={formik.isSubmitting} // Disable button while submitting
+                                        type="submit"
+                                        disabled={formik.isSubmitting}
                                         className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-md shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-50"
                                     >
                                         {formik.isSubmitting ? 'Creating...' : 'Create account'}
@@ -313,7 +343,7 @@ export default function RegisterPage() {
                                             Already have an account?{' '}
                                         </span>
                                         <a
-                                            href="#"
+                                            href="/login"
                                             className="text-primary font-semibold hover:text-primary/80"
                                         >
                                             Sign in
