@@ -11,6 +11,8 @@ import { CursorEye } from "@/components/auth/eye-cursor"
 import z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
+import { useLogin } from "@/services/api/auth-service"
+import { useAuthStore } from "@/stores/auth-store"
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
 
@@ -37,17 +39,18 @@ export default function LoginPage() {
         },
     })
 
+    const { mutate: login, isPending, isError, error } = useLogin()
+    const { user } = useAuthStore()
+
     const onSubmit = async (values: LoginFormValues) => {
-        console.log('Form data:', values)
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        console.log('Form submitted successfully:', JSON.stringify(values, null, 2))
+        login({ email: values.email, password: values.password })
     }
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
             <TrailingCursor />
             <ThemeToggle />
-
+            <h1>{user?.email} asdasd</h1>
             <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
 
