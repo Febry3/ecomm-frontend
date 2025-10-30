@@ -6,6 +6,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/provider/theme-provider"
 import { Urbanist } from 'next/font/google';
 import TanstackProviders from "./tanstack-provider"
+import { Toaster } from "sonner"
 
 const _urbanist = Urbanist({ subsets: ["latin"] })
 
@@ -25,6 +26,7 @@ export default function RootLayout({
         <TanstackProviders>
           <ThemeProvider>{children}</ThemeProvider>
         </TanstackProviders>
+        <Toaster/>
       </body>
     </html>
   )

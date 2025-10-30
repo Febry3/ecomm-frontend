@@ -11,6 +11,7 @@ import { CursorEye } from "@/components/auth/eye-cursor"
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { useRegister } from "@/services/api/auth-service"
 
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
@@ -54,11 +55,11 @@ export default function RegisterPage() {
         },
     })
 
+    const {mutate: registerFn} = useRegister();
+
     // 4. Create the submit handler
     const onSubmit = async (values: RegisterFormValues) => {
-        console.log('Form data:', values)
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        console.log('Form submitted successfully:', JSON.stringify(values, null, 2))
+        registerFn({username: values.username, first_name: values.firstName, last_name: values.lastName, email: values.email, phone_number: values.phone, password: values.password});
     }
 
     return (
