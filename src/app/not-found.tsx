@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
     return (
-        <div className="relative min-h-screen min-w-screen bg-background flex justify-center items-center">
+        <div className="relative min-h-full min-w-full bg-background flex justify-center items-center">
             <div className="absolute pointer-events-none">
                 <p className="text-[15rem] font-semibold opacity-25">404</p>
             </div>

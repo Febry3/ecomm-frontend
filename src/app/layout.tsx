@@ -1,3 +1,4 @@
+
 import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
@@ -5,7 +6,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/provider/theme-provider"
 import { Urbanist } from 'next/font/google';
-import TanstackProviders from "./tanstack-provider"
+import ConditionalLayout from "@/components/conditional-layout"
 
 const _urbanist = Urbanist({ subsets: ["latin"] })
 
@@ -22,9 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={_urbanist.className}>
-        <TanstackProviders>
-          <ThemeProvider>{children}</ThemeProvider>
-        </TanstackProviders>
+        <ConditionalLayout>{children}</ConditionalLayout>
       </body>
     </html>
   )

@@ -13,6 +13,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { useLogin } from "@/services/api/auth-service"
 import { useAuthStore } from "@/stores/auth-store"
+import apiClient from "@/lib/api-client"
+import axios from "axios"
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
 
@@ -40,7 +42,7 @@ export default function LoginPage() {
     })
 
     const { mutate: login, isPending, isError, error } = useLogin()
-    const { user } = useAuthStore()
+    const { user, accessToken } = useAuthStore()
 
     const onSubmit = async (values: LoginFormValues) => {
         login({ email: values.email, password: values.password })
@@ -50,7 +52,7 @@ export default function LoginPage() {
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
             <TrailingCursor />
             <ThemeToggle />
-            <h1>{user?.email} asdasd</h1>
+            <h1>{accessToken} asdasd</h1>
             <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
 

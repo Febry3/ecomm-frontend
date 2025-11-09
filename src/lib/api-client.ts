@@ -66,9 +66,9 @@ apiClient.interceptors.response.use(
                     { withCredentials: true }
                 );
 
-                const { accessToken } = refreshResponse.data.data;
-                useAuthStore.getState().setToken(accessToken)
-                originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
+                const { access_token } = refreshResponse.data;
+                useAuthStore.getState().setToken(access_token)
+                originalRequest.headers['Authorization'] = `Bearer ${access_token}`;
                 return apiClient(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
