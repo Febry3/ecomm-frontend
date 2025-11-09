@@ -37,14 +37,14 @@ export function MainBanner({ slides }: MainBannerProps) {
     const currentBanner = slides[currentSlide]
 
     return (
-        <div className="relative w-full px-4 py-4">
+        <div className="relative w-full">
             <div className="relative w-full mx-auto">
                 <div
                     className="relative rounded-3xl overflow-hidden p-8 md:p-12 bg-opacity-10"
                     style={
                         currentBanner.backgroundImage
                             ? {
-                                backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1),url(${currentBanner.backgroundImage})`,
+                                backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)),url(${currentBanner.backgroundImage})`,
                                 backgroundSize: "cover",
                                 backgroundPosition: "center",
                                 opacity: 10,
@@ -78,8 +78,9 @@ export function MainBanner({ slides }: MainBannerProps) {
 
                             <div>
                                 <Button
+                                    type="button"
                                     size="lg"
-                                    className="text-foreground bg-secondary font-semibold px-8"
+                                    className="font-semibold px-8"
                                     onClick={() => {
                                         window.location.href = currentBanner.buttonLink
                                     }}
@@ -94,6 +95,7 @@ export function MainBanner({ slides }: MainBannerProps) {
                     {slides.length > 1 && (
                         <>
                             <Button
+                                type="button"
                                 onClick={prevSlide}
                                 className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-primary/20 hover:bg-primary/30 backdrop-blur-sm flex items-center justify-center transition-colors"
                                 aria-label="Previous slide"
