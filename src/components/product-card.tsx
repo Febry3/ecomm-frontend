@@ -13,6 +13,7 @@ export interface ProductCard {
     badge?: string,
     image: string,
     isFavorite: boolean,
+    stock?: number
 }
 
 type ProductProps = ProductCard & React.HTMLAttributes<HTMLDivElement>;
@@ -27,6 +28,7 @@ export default function ProductCard({
     badge,
     image,
     isFavorite,
+    stock = 0,
     ...divProps
 }: ProductProps) {
     return (

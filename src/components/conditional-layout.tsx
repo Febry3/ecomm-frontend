@@ -18,7 +18,9 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
                 ) : (
                     <>
                         <Navbar />
-                        {children}
+                        <div className="min-h-screen w-full px-12 py-4">
+                            {children}
+                        </div>
                         <Footer />
                     </>
                 )}
