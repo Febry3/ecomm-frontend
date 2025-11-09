@@ -14,7 +14,10 @@ import { useForm } from "react-hook-form"
 import { useLogin } from "@/services/api/auth-service"
 import { useAuthStore } from "@/stores/auth-store"
 import apiClient from "@/lib/api-client"
+<<<<<<< HEAD
 import axios from "axios"
+=======
+>>>>>>> 86d9ab27c938ab2ec0887fe61efa9e7acaf2e1ef
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
 
@@ -48,11 +51,20 @@ export default function LoginPage() {
         login({ email: values.email, password: values.password })
     }
 
+    const onTest =  async () => {
+        const response = await apiClient.get("/test") 
+        console.log(response)
+    }
+
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
             <TrailingCursor />
             <ThemeToggle />
+<<<<<<< HEAD
             <h1>{accessToken} asdasd</h1>
+=======
+            
+>>>>>>> 86d9ab27c938ab2ec0887fe61efa9e7acaf2e1ef
             <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -182,6 +194,8 @@ export default function LoginPage() {
                                         {isSubmitting ? 'Signing in...' : 'Sign in'}
                                     </Button>
 
+                                    {/* test */}
+                                    <Button onClick={onTest} type="button"> Test </Button>
                                     {/* Legal Text */}
                                     <p className="text-xs text-muted-foreground text-center leading-relaxed">
                                         By continuing, you agree to our{' '}
