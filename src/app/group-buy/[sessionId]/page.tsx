@@ -8,7 +8,7 @@ const mockSession: GroupBuySession = {
     product: {
         id: "1",
         title: "Keyboard Gaming Fantech MAXFIT",
-        image: "/gaming-keyboard-rgb.jpg",
+        image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=1000&auto=format&fit=crop",
         rating: 4.5,
         reviewCount: 30,
         originalPrice: 467350,

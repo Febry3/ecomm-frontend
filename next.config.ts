@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
-    domains: ['localhost', 'picsum.photos', 'images.unsplash.com']
+    domains: ['localhost', 'picsum.photos', 'images.unsplash.com', 'google.com']
   }
 };
 
