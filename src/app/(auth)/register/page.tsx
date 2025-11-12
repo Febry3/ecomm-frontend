@@ -12,6 +12,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useRegister } from "@/services/api/auth-service"
+import { useGoogleLogin } from '@react-oauth/google';
 
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
@@ -55,12 +56,18 @@ export default function RegisterPage() {
         },
     })
 
-    const {mutate: registerFn} = useRegister();
+    const { mutate: registerFn } = useRegister();
 
     // 4. Create the submit handler
     const onSubmit = async (values: RegisterFormValues) => {
-        registerFn({username: values.username, first_name: values.firstName, last_name: values.lastName, email: values.email, phone_number: values.phone, password: values.password});
+        registerFn({ username: values.username, first_name: values.firstName, last_name: values.lastName, email: values.email, phone_number: values.phone, password: values.password });
     }
+
+    const onGoogleRegister = useGoogleLogin({
+        onSuccess: (response) => console.log(response),
+        onError: (error) => console.log(error),
+        flow: 'auth-code',
+    });
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
@@ -100,6 +107,7 @@ export default function RegisterPage() {
                                 <CardContent className="space-y-4 pt-6">
                                     {/* Google Button */}
                                     <Button
+                                        onClick={() => onGoogleRegister()}
                                         type="button"
                                         variant="outline"
                                         className="w-full h-9 border-border hover:bg-muted text-foreground bg-transparent text-sm"

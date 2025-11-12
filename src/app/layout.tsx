@@ -7,6 +7,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/provider/theme-provider"
 import { Urbanist } from 'next/font/google';
 import ConditionalLayout from "@/components/conditional-layout"
+import { GoogleOAuthProvider } from "@react-oauth/google"
 
 const _urbanist = Urbanist({ subsets: ["latin"] })
 
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={_urbanist.className}>
-        <ConditionalLayout>{children}</ConditionalLayout>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_CLIENT_ID!}>
+          <ConditionalLayout>{children}</ConditionalLayout>
+        </GoogleOAuthProvider>
       </body>
     </html>
   )

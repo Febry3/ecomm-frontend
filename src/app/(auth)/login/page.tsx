@@ -14,6 +14,7 @@ import { useForm } from "react-hook-form"
 import { useLogin } from "@/services/api/auth-service"
 import { useAuthStore } from "@/stores/auth-store"
 import apiClient from "@/lib/api-client"
+import { useGoogleLogin } from "@react-oauth/google"
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
 
@@ -46,6 +47,12 @@ export default function LoginPage() {
     const onSubmit = async (values: LoginFormValues) => {
         login({ email: values.email, password: values.password })
     }
+
+    const onGoogleLogin = useGoogleLogin({
+        onSuccess: (response) => console.log(response),
+        onError: (error) => console.log(error),
+        flow: "auth-code"
+    });
 
     const onTest = async () => {
         const response = await apiClient.get("/test")
@@ -90,6 +97,7 @@ export default function LoginPage() {
                                 <CardContent className="space-y-4 pt-6">
                                     {/* Google Button */}
                                     <Button
+                                        onClick={() => onGoogleLogin()}
                                         type="button"
                                         variant="outline"
                                         className="w-full h-9 border-border hover:bg-muted text-foreground bg-transparent text-sm"
