@@ -99,7 +99,7 @@ export default function Navbar() {
                     </div>
 
                     <div className="hidden items-center gap-2 md:flex">
-                        {!isAuthenticated ? (
+                        {isAuthenticated ? (
                             <>
                                 <Link href="/cart">
                                     <Button

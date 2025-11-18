@@ -11,10 +11,11 @@ import { CursorEye } from "@/components/auth/eye-cursor"
 import z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import { useLogin } from "@/services/api/auth-service"
+import { useGoogleLoginOrRegister, useLogin } from "@/services/api/auth-service"
 import { useAuthStore } from "@/stores/auth-store"
 import apiClient from "@/lib/api-client"
 import { useGoogleLogin } from "@react-oauth/google"
+import { toast } from "sonner"
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
 
@@ -42,6 +43,7 @@ export default function LoginPage() {
     })
 
     const { mutate: login, isPending, isError, error } = useLogin()
+    const { mutate: loginWithGoogle } = useGoogleLoginOrRegister();
     const { user, accessToken } = useAuthStore()
 
     const onSubmit = async (values: LoginFormValues) => {
@@ -49,8 +51,10 @@ export default function LoginPage() {
     }
 
     const onGoogleLogin = useGoogleLogin({
-        onSuccess: (response) => console.log(response),
-        onError: (error) => console.log(error),
+        onSuccess: (response) => {
+            loginWithGoogle(response.code);
+        },
+        onError: (error) => toast.error(error?.error_description),
         flow: "auth-code"
     });
 
@@ -63,10 +67,8 @@ export default function LoginPage() {
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
             <TrailingCursor />
             <ThemeToggle />
-            <h1>{accessToken} asdasd</h1>
             <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
-
             <div className="relative z-10 w-full max-w-5xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 items-center">
                     {/* Left Column - Compact */}

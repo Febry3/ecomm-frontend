@@ -5,9 +5,11 @@ import { Geist, Geist_Mono } from "next/font/google"
 // import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/provider/theme-provider"
+import { AuthProvider } from "@/components/provider/auth-provider"
 import { Urbanist } from 'next/font/google';
 import ConditionalLayout from "@/components/conditional-layout"
 import { GoogleOAuthProvider } from "@react-oauth/google"
+import { Toaster } from "sonner"
 
 const _urbanist = Urbanist({ subsets: ["latin"] })
 
@@ -24,8 +26,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={_urbanist.className}>
+        <Toaster />
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_CLIENT_ID!}>
-          <ConditionalLayout>{children}</ConditionalLayout>
+          <AuthProvider>
+            <ConditionalLayout>{children}</ConditionalLayout>
+          </AuthProvider>
         </GoogleOAuthProvider>
       </body>
     </html>

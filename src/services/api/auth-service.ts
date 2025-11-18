@@ -1,5 +1,6 @@
 import apiClient from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
+import { GoogleLoginResponse } from "@/types/auth";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
@@ -10,7 +11,6 @@ interface ErrrorResponse {
 
 export function useLogin() {
     const { setUser, setToken } = useAuthStore();
-
     return useMutation({
         mutationFn: async (credentials: { email: string; password: string }) => {
             const response = await apiClient.post('/auth/login', credentials);
@@ -19,7 +19,8 @@ export function useLogin() {
         onSuccess: (data) => {
             setUser({ user_id: data.id, username: data.username, email: data.email });
             setToken(data.access_token);
-            toast("Login successfully")
+            toast("Login successfully");
+            window.location.href = "/";
         },
         onError: (error) => {
             if (axios.isAxiosError(error)) {
@@ -31,14 +32,15 @@ export function useLogin() {
     });
 }
 
-export function useRegister(){
+export function useRegister() {
     return useMutation({
-        mutationFn: async (credentials: {username: string, first_name:string, last_name:string, phone_number:string, email:string, password: string}) => {
+        mutationFn: async (credentials: { username: string, first_name: string, last_name: string, phone_number: string, email: string, password: string }) => {
             const response = await apiClient.post('/auth/register', credentials);
             return response.data.data;
         },
         onSuccess: (data) => {
-            toast.success("Registered successfully")
+            toast.success("Registered successfully");
+            window.location.href = "/login"
         },
         onError: (error) => {
             toast.error("Failed to register")
@@ -47,20 +49,44 @@ export function useRegister(){
     })
 }
 
-// Hook: useLogout
-export function useLogout(){
+export function useLogout() {
     const { clearAuth } = useAuthStore();
 
     return useMutation({
         mutationFn: async () => {
-            await apiClient.post('/auth/logout');
+            const response = await apiClient.post('/auth/logout');
+            return response.data;
         },
-        onSuccess: () => {
-            clearAuth();
+        onSuccess: (response) => {
+            if (response.status) clearAuth();
         },
         onError: (error) => {
             console.error('Logout failed:', error);
             clearAuth();
         },
+    });
+};
+
+export function useGoogleLoginOrRegister() {
+    const { setUser, setToken } = useAuthStore();
+    return useMutation({
+        mutationFn: async (code: string) => {
+            const response = await apiClient.post('auth/google', {
+                code: code
+            });
+            return response.data.data as GoogleLoginResponse;
+        },
+        onSuccess: (data) => {
+            console.log("login on  google", data)
+            setUser({ username: data.first_name, email: data.email, user_id: data.id });
+            setToken(data.access_token);
+            console.log("on success:", data);
+            toast.success("Auth Success");
+            window.location.href = "/";
+        },
+        onError: (error) => {
+            console.error("Login with google error: ", error.message)
+            toast.error(error.message);
+        }
     });
 };
