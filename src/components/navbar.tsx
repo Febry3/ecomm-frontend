@@ -45,6 +45,7 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0a0a1f]/95 backdrop-blur-md">
       <div className="relative">
+        <h1>{user?.avatar_url}</h1>
         {/* Gradient glow at bottom */}
         <div className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-primary/50 to-transparent" />
 
