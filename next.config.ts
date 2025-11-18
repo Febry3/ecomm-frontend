@@ -1,9 +1,41 @@
+import { url } from "inspector";
 import type { NextConfig } from "next";
+import { ur } from "zod/v4/locales";
 
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
-    domains: ['localhost', 'picsum.photos', 'images.unsplash.com', 'google.com']
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "localhost",
+      },
+      {
+        protocol: "https",
+        hostname: "picsum.photos",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**.googleusercontent.com", // Double asterisk matches subdomains AND root paths often
+      },
+      {
+        protocol: "http", // Allow http specifically for the URL you have
+        hostname: "**.googleusercontent.com",
+      },
+      // Explicit fallback for the root domain if wildcard acts up
+      {
+        protocol: "https",
+        hostname: "googleusercontent.com",
+      },
+      {
+        protocol: "http",
+        hostname: "googleusercontent.com",
+      },
+    ],
   },
   async headers() {
     return [
