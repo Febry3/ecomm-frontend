@@ -148,53 +148,51 @@ export default function Navbar() {
                                         )}
                                     </Button>
                                 </Link>
-                                <Link href="/account">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger>
-                                            <div
-                                                className={`gap-2 text-sm transition-colors hover:bg-white/5 flex flex-row items-center justify-center ${isActive("/account")
-                                                    ? "text-primary"
-                                                    : "text-muted-foreground hover:text-foreground"
-                                                    }`}
-                                            >
-                                                <Avatar>
-                                                    <AvatarImage src={user?.profile_url} />
-                                                    <AvatarFallback>
-                                                        {getFirstLetter(user?.username || "")}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                {user?.username}
-                                            </div>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuLabel className="flex flex-row items-center gap-2">
-                                                <Avatar>
-                                                    <AvatarImage src={user?.profile_url} />
-                                                    <AvatarFallback>
-                                                        {getFirstLetter(user?.username || "")}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <p>{user?.username}</p>
-                                            </DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem>Profile</DropdownMenuItem>
-                                            <DropdownMenuItem>Seller</DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                className="bg-red-500"
-                                                onClick={() => onLogout()}
-                                            >
-                                                Logout
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </Link>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger>
+                                        <div
+                                            className={`gap-2 text-sm transition-colors hover:bg-white/5 flex flex-row items-center justify-center ${isActive("/account")
+                                                ? "text-primary"
+                                                : "text-muted-foreground hover:text-foreground"
+                                                }`}
+                                        >
+                                            <Avatar>
+                                                <AvatarImage src={user?.profile_url} />
+                                                <AvatarFallback>
+                                                    {getFirstLetter(user?.username || "")}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            {user?.username}
+                                        </div>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuLabel className="flex flex-row items-center gap-2">
+                                            <Avatar>
+                                                <AvatarImage src={user?.profile_url} />
+                                                <AvatarFallback>
+                                                    {getFirstLetter(user?.username || "")}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <p>{user?.username}</p>
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem><Link href="/profile">Profile</Link></DropdownMenuItem>
+                                        <DropdownMenuItem>Seller</DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            className="bg-red-500"
+                                            onClick={() => onLogout()}
+                                        >
+                                            Logout
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </>
                         ) : (
                             <Link href="/login">
                                 <Button type="button">Login</Button>
                             </Link>
                         )}
-                        <ThemeToggle />
+                        <ThemeToggle className="ms-5" />
                     </div>
 
                     <div className="flex items-center gap-2 md:hidden">
@@ -211,6 +209,6 @@ export default function Navbar() {
                     </div>
                 </div>
             </div>
-        </nav>
+        </nav >
     );
 }

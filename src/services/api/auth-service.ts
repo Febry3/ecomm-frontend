@@ -61,11 +61,9 @@ export function useLogout() {
 
     return useMutation({
         mutationFn: async () => {
-            const response = await apiClient.post("/auth/logout");
-            return response.data;
+            await apiClient.post("/auth/logout");
         },
-        onSuccess: (response) => {
-            console.log("logout response:", response);
+        onSuccess: () => {
             clearAuth();
         },
         onError: (error) => {
@@ -95,7 +93,7 @@ export function useGoogleLoginOrRegister() {
             setToken(data.access_token);
             console.log("on success:", data);
             toast.success("Auth Success");
-            // window.location.href = "/";
+            window.location.href = "/";
         },
         onError: (error) => {
             console.error("Login with google error: ", error.message);

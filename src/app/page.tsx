@@ -15,7 +15,7 @@ export default function Home() {
       <MainBanner slides={dummyBannerSlides} />
       <div className="mt-10">
         <h1 className="text-4xl font-bold mb-5">Recommended For You !</h1>
-        <div className="w-full bg-secondary rounded-2xl p-10 grid sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-10 gap-5 justify-center">
+        <div className="w-full bg-secondary rounded-2xl p-10 grid sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-10 gap-7 justify-center">
           {products.map((val) => (
             <Link
               className="sm:col-span-4 md:col-span-4 lg:col-span-2"
