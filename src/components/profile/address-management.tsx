@@ -1,24 +1,28 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Edit, Trash2, MapPin } from 'lucide-react'
+import { Plus, Edit, Trash2, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { LocationPicker } from "@/components/map/location-picker"
 import { toast } from "sonner"
-
 
 interface Address {
     id: string
     label: string
     fullName: string
     phone: string
-    addressLine1: string
-    addressLine2: string
+    streetAddress: string
+    rt?: string
+    rw?: string
+    village: string
+    district: string
     city: string
+    province: string
     postalCode: string
-    country: string
+    notes?: string
     isDefault: boolean
 }
 
@@ -28,12 +32,16 @@ export function AddressManagement() {
             id: "1",
             label: "Home",
             fullName: "John Doe",
-            phone: "+1234567890",
-            addressLine1: "123 Main Street",
-            addressLine2: "Apt 4B",
-            city: "New York",
-            postalCode: "10001",
-            country: "USA",
+            phone: "+6281234567890",
+            streetAddress: "Jl. Merdeka No. 123",
+            rt: "001",
+            rw: "002",
+            village: "Gambir",
+            district: "Gambir",
+            city: "Jakarta Pusat",
+            province: "DKI Jakarta",
+            postalCode: "10110",
+            notes: "Near the monument",
             isDefault: true,
         },
     ])
@@ -44,25 +52,49 @@ export function AddressManagement() {
         label: "",
         fullName: "",
         phone: "",
-        addressLine1: "",
-        addressLine2: "",
+        streetAddress: "",
+        rt: "",
+        rw: "",
+        village: "",
+        district: "",
         city: "",
+        province: "",
         postalCode: "",
-        country: "",
+        notes: "",
         isDefault: false,
     })
+    const [showMapPicker, setShowMapPicker] = useState(false)
+
+    const handleLocationSelect = (addressData: any) => {
+        setFormData({
+            ...formData,
+            streetAddress: addressData.streetAddress || "",
+            village: addressData.village || "",
+            district: addressData.district || "",
+            city: addressData.city || "",
+            province: addressData.province || "",
+            postalCode: addressData.postalCode || "",
+        })
+        setShowMapPicker(false)
+        toast.success("Address details have been filled from the map.")
+    }
 
     const handleAddAddress = () => {
         setEditingAddress(null)
+        setShowMapPicker(false)
         setFormData({
             label: "",
             fullName: "",
             phone: "",
-            addressLine1: "",
-            addressLine2: "",
+            streetAddress: "",
+            rt: "",
+            rw: "",
+            village: "",
+            district: "",
             city: "",
+            province: "",
             postalCode: "",
-            country: "",
+            notes: "",
             isDefault: false,
         })
         setIsDialogOpen(true)
@@ -71,27 +103,28 @@ export function AddressManagement() {
     const handleEditAddress = (address: Address) => {
         setEditingAddress(address)
         setFormData(address)
+        setShowMapPicker(false)
         setIsDialogOpen(true)
     }
 
     const handleSaveAddress = () => {
         if (editingAddress) {
             setAddresses(addresses.map((addr) => (addr.id === editingAddress.id ? { ...formData, id: addr.id } : addr)))
-            toast("Your address has been updated successfully.")
+            toast.success("Your address has been updated successfully.")
         } else {
             const newAddress: Address = {
                 ...formData,
                 id: Date.now().toString(),
             }
             setAddresses([...addresses, newAddress])
-            toast("New address has been added successfully.")
+            toast.success("New address has been added successfully.")
         }
         setIsDialogOpen(false)
     }
 
     const handleDeleteAddress = (id: string) => {
         setAddresses(addresses.filter((addr) => addr.id !== id))
-        toast("Address has been removed.")
+        toast.success("Address has been removed.")
     }
 
     return (
@@ -107,66 +140,129 @@ export function AddressManagement() {
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>{editingAddress ? "Edit Address" : "Add New Address"}</DialogTitle>
+                            <DialogTitle>
+                                {showMapPicker ? "Pick Location" : editingAddress ? "Edit Address" : "Add New Address"}
+                            </DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="label">Address Label</Label>
-                                <Input
-                                    id="label"
-                                    value={formData.label}
-                                    onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-                                    placeholder="e.g., Home, Office"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+
+                        {showMapPicker ? (
+                            <LocationPicker onCancel={() => setShowMapPicker(false)} onLocationSelect={handleLocationSelect} />
+                        ) : (
+                            <div className="space-y-4 py-4">
+                                <div className="flex justify-end">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 text-primary border-primary/20 hover:bg-primary/5 bg-transparent"
+                                        onClick={() => setShowMapPicker(true)}
+                                    >
+                                        <MapPin className="w-4 h-4" />
+                                        Pick from Map
+                                    </Button>
+                                </div>
+
                                 <div className="space-y-2">
-                                    <Label htmlFor="fullName">Full Name</Label>
+                                    <Label htmlFor="label">Address Label</Label>
                                     <Input
-                                        id="fullName"
-                                        value={formData.fullName}
-                                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                        placeholder="Enter full name"
+                                        id="label"
+                                        value={formData.label}
+                                        onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                                        placeholder="e.g., Home, Office"
                                     />
                                 </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="fullName">Full Name</Label>
+                                        <Input
+                                            id="fullName"
+                                            value={formData.fullName}
+                                            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                                            placeholder="Enter full name"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="phone">Phone Number</Label>
+                                        <Input
+                                            id="phone"
+                                            value={formData.phone}
+                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            placeholder="Enter phone number"
+                                        />
+                                    </div>
+                                </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="phone">Phone Number</Label>
+                                    <Label htmlFor="streetAddress">Street Address</Label>
                                     <Input
-                                        id="phone"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        placeholder="Enter phone number"
+                                        id="streetAddress"
+                                        value={formData.streetAddress}
+                                        onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
+                                        placeholder="Jalan Name, House Number"
                                     />
                                 </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="addressLine1">Address Line 1</Label>
-                                <Input
-                                    id="addressLine1"
-                                    value={formData.addressLine1}
-                                    onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
-                                    placeholder="Street address"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="addressLine2">Address Line 2</Label>
-                                <Input
-                                    id="addressLine2"
-                                    value={formData.addressLine2}
-                                    onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-                                    placeholder="Apartment, suite, etc."
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="city">City</Label>
-                                    <Input
-                                        id="city"
-                                        value={formData.city}
-                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                        placeholder="Enter city"
-                                    />
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="rt">RT (Optional)</Label>
+                                        <Input
+                                            id="rt"
+                                            value={formData.rt}
+                                            onChange={(e) => setFormData({ ...formData, rt: e.target.value })}
+                                            placeholder="000"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="rw">RW (Optional)</Label>
+                                        <Input
+                                            id="rw"
+                                            value={formData.rw}
+                                            onChange={(e) => setFormData({ ...formData, rw: e.target.value })}
+                                            placeholder="000"
+                                        />
+                                    </div>
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="village">Village (Kelurahan/Desa)</Label>
+                                        <Input
+                                            id="village"
+                                            value={formData.village}
+                                            onChange={(e) => setFormData({ ...formData, village: e.target.value })}
+                                            placeholder="Enter village"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="district">District (Kecamatan)</Label>
+                                        <Input
+                                            id="district"
+                                            value={formData.district}
+                                            onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                                            placeholder="Enter district"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="city">City/Regency</Label>
+                                        <Input
+                                            id="city"
+                                            value={formData.city}
+                                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                            placeholder="Enter city"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="province">Province</Label>
+                                        <Input
+                                            id="province"
+                                            value={formData.province}
+                                            onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                                            placeholder="Enter province"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="space-y-2">
                                     <Label htmlFor="postalCode">Postal Code</Label>
                                     <Input
@@ -176,35 +272,37 @@ export function AddressManagement() {
                                         placeholder="Enter postal code"
                                     />
                                 </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="notes">Notes (Patokan)</Label>
+                                    <Input
+                                        id="notes"
+                                        value={formData.notes}
+                                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                        placeholder="e.g., White fence, near Indomaret"
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="isDefault"
+                                        checked={formData.isDefault}
+                                        onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+                                        className="w-4 h-4"
+                                    />
+                                    <Label htmlFor="isDefault" className="cursor-pointer">
+                                        Set as default address
+                                    </Label>
+                                </div>
+                                <div className="flex justify-end gap-2 pt-4">
+                                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button onClick={handleSaveAddress}>Save Address</Button>
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="country">Country</Label>
-                                <Input
-                                    id="country"
-                                    value={formData.country}
-                                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                                    placeholder="Enter country"
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    id="isDefault"
-                                    checked={formData.isDefault}
-                                    onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                                    className="w-4 h-4"
-                                />
-                                <Label htmlFor="isDefault" className="cursor-pointer">
-                                    Set as default address
-                                </Label>
-                            </div>
-                            <div className="flex justify-end gap-2 pt-4">
-                                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                                    Cancel
-                                </Button>
-                                <Button onClick={handleSaveAddress}>Save Address</Button>
-                            </div>
-                        </div>
+                        )}
                     </DialogContent>
                 </Dialog>
             </div>
@@ -232,12 +330,17 @@ export function AddressManagement() {
                                     <p className="text-sm">{address.fullName}</p>
                                     <p className="text-sm text-muted-foreground">{address.phone}</p>
                                     <p className="text-sm text-muted-foreground mt-2">
-                                        {address.addressLine1}
-                                        {address.addressLine2 && `, ${address.addressLine2}`}
+                                        {address.streetAddress}
+                                        {address.rt && `, RT ${address.rt}`}
+                                        {address.rw && `, RW ${address.rw}`}
                                     </p>
                                     <p className="text-sm text-muted-foreground">
-                                        {address.city}, {address.postalCode}, {address.country}
+                                        {address.village}, {address.district}
                                     </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {address.city}, {address.province} {address.postalCode}
+                                    </p>
+                                    {address.notes && <p className="text-sm text-muted-foreground italic mt-1">Note: {address.notes}</p>}
                                 </div>
                                 <div className="flex gap-2">
                                     <Button variant="ghost" size="icon" onClick={() => handleEditAddress(address)}>
