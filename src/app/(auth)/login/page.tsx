@@ -70,7 +70,6 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
             <TrailingCursor />
-            <ThemeToggle className="fixed top-4 right-4 z-50" />
             <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
             <div className="relative z-10 w-full max-w-5xl">

@@ -1,22 +1,42 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Camera, Save } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
+import { useChangeUserData, useGetUserData } from "@/services/api/user-service"
+import { useAuthStore } from "@/stores/auth-store"
 
 export function ProfileEdit() {
+    const { data: userData, isLoading, isError, error } = useGetUserData();
+    const { mutate: updateUserData, isPending } = useChangeUserData();
+    const { user } = useAuthStore();
+
     const [profileData, setProfileData] = useState({
-        username: "johndoe",
-        firstName: "John",
-        lastName: "Doe",
-        phoneNumber: "+1234567890",
-        email: "john.doe@example.com",
-        profilePicture: "/placeholder.svg?height=100&width=100",
+        username: "",
+        firstName: "",
+        lastName: "",
+        phoneNumber: "",
+        email: "",
+        profilePicture: "",
     })
+
+    // Populate form when user data is fetched
+    useEffect(() => {
+        if (userData) {
+            setProfileData({
+                username: userData.username || "",
+                firstName: userData.first_name || "",
+                lastName: userData.last_name || "",
+                phoneNumber: userData.phone_number || "",
+                email: userData.email || "",
+                profilePicture: userData.profile_url || "",
+            });
+        }
+    }, [userData]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -30,8 +50,34 @@ export function ProfileEdit() {
     }
 
     const handleSave = () => {
-        // Save logic here
-        toast("Your profile has been successfully updated.")
+        updateUserData({
+            username: profileData.username,
+            first_name: profileData.firstName,
+            last_name: profileData.lastName,
+            phone_number: profileData.phoneNumber,
+            profile_url: profileData.profilePicture,
+            user_id: user!.user_id,
+        });
+    }
+
+    if (isLoading) {
+        return (
+            <div className="bg-card border border-border rounded-lg p-6">
+                <div className="flex items-center justify-center h-64">
+                    <p className="text-muted-foreground">Loading profile...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (isError) {
+        return (
+            <div className="bg-card border border-border rounded-lg p-6">
+                <div className="flex items-center justify-center h-64">
+                    <p className="text-destructive">Error loading profile: {error?.message}</p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -44,8 +90,8 @@ export function ProfileEdit() {
                     <Avatar className="w-24 h-24">
                         <AvatarImage src={profileData.profilePicture || "/placeholder.svg"} alt={profileData.username} />
                         <AvatarFallback>
-                            {profileData.firstName[0]}
-                            {profileData.lastName[0]}
+                            {profileData.firstName[0] || "U"}
+                            {profileData.lastName[0] || "U"}
                         </AvatarFallback>
                     </Avatar>
                     <div>
@@ -119,9 +165,9 @@ export function ProfileEdit() {
 
                 {/* Save Button */}
                 <div className="flex justify-end pt-4">
-                    <Button onClick={handleSave} className="gap-2">
+                    <Button onClick={handleSave} className="gap-2" disabled={isPending}>
                         <Save className="w-4 h-4" />
-                        Save Changes
+                        {isPending ? "Saving..." : "Save Changes"}
                     </Button>
                 </div>
             </div>

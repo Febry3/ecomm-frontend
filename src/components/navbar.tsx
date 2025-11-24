@@ -14,9 +14,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuthStore } from "@/stores/auth-store";
-import { ThemeToggle } from "./provider/theme-toggle";
 import Image from "next/image";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { AvatarImage } from "@radix-ui/react-avatar";
@@ -192,7 +190,6 @@ export default function Navbar() {
                                 <Button type="button">Login</Button>
                             </Link>
                         )}
-                        <ThemeToggle className="ms-5" />
                     </div>
 
                     <div className="flex items-center gap-2 md:hidden">

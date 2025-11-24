@@ -10,7 +10,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-    const { setUser, setToken, accessToken } = useAuthStore();
+    const { setUser, setToken, accessToken, clearAuth } = useAuthStore();
     const hasInitialized = useRef(false);
 
     useEffect(() => {
@@ -19,19 +19,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
             hasInitialized.current = true;
 
             try {
-                const storedToken = localStorage.getItem('authToken');
-
-                if (storedToken) {
-                    setToken(storedToken);
+                if (accessToken) {
+                    setToken(accessToken);
                 }
 
-                if (storedToken || accessToken) {
+                if (accessToken) {
                     const response = await apiClient.post('/auth/refresh');
                     const userData = response.data.data as User;
                     setUser(userData);
                 }
             } catch (error) {
-                localStorage.removeItem('authToken');
+                clearAuth();
                 console.error('Failed to fetch user data:', error);
             }
         };

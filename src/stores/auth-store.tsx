@@ -23,7 +23,7 @@ export const useAuthStore = create<authState, [["zustand/persist", authState]]>(
         set({ accessToken: token });
       },
       clearAuth: () => {
-        localStorage.removeItem("authToken");
+        localStorage.clear();
         document.cookie = "authToken=; path=/; max-age=0";
         set({ user: null, accessToken: null, isAuthenticated: false });
       },

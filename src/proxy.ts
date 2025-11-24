@@ -12,7 +12,7 @@ function chainMiddleware(functions: ((request: NextRequest, response: NextRespon
     }
 }
 
-export const middleware = (request: NextRequest) => chainMiddleware([
+export const proxy = (request: NextRequest) => chainMiddleware([
     withLoggingMiddleware,
     withAuthMiddleware
 ])(request);
