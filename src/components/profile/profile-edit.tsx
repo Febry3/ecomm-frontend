@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
-import { useChangeUserData, useGetUserData } from "@/services/api/user-service"
+import { useChangeUserData, useGetUserData, useChangeAvatar } from "@/services/api/user-service"
 import { useAuthStore } from "@/stores/auth-store"
 
 export function ProfileEdit() {
     const { data: userData, isLoading, isError, error } = useGetUserData();
     const { mutate: updateUserData, isPending } = useChangeUserData();
+    const { mutate: updateAvatar, isPending: isAvatarPending } = useChangeAvatar();
     const { user } = useAuthStore();
 
     const [profileData, setProfileData] = useState({
@@ -23,6 +24,9 @@ export function ProfileEdit() {
         email: "",
         profilePicture: "",
     })
+
+    // Store the selected file separately
+    const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
 
     // Populate form when user data is fetched
     useEffect(() => {
@@ -41,6 +45,10 @@ export function ProfileEdit() {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
+            // Store the file for later upload
+            setSelectedAvatarFile(file);
+
+            // Create preview
             const reader = new FileReader()
             reader.onloadend = () => {
                 setProfileData({ ...profileData, profilePicture: reader.result as string })
@@ -49,16 +57,45 @@ export function ProfileEdit() {
         }
     }
 
-    const handleSave = () => {
-        updateUserData({
-            username: profileData.username,
-            first_name: profileData.firstName,
-            last_name: profileData.lastName,
-            phone_number: profileData.phoneNumber,
-            profile_url: profileData.profilePicture,
-            user_id: user!.user_id,
-        });
+    const handleSave = async () => {
+        // First, upload avatar if a new one was selected
+        if (selectedAvatarFile) {
+            updateAvatar(selectedAvatarFile, {
+                onSuccess: () => {
+                    // After avatar upload succeeds, update user data
+                    updateUserData({
+                        username: profileData.username,
+                        first_name: profileData.firstName,
+                        last_name: profileData.lastName,
+                        phone_number: profileData.phoneNumber,
+                        user_id: user!.user_id,
+                    });
+                    // Clear the selected file
+                    setSelectedAvatarFile(null);
+                },
+                onError: () => {
+                    // If avatar upload fails, still try to update user data
+                    updateUserData({
+                        username: profileData.username,
+                        first_name: profileData.firstName,
+                        last_name: profileData.lastName,
+                        phone_number: profileData.phoneNumber,
+                        user_id: user!.user_id,
+                    });
+                }
+            });
+        } else {
+            // No avatar change, just update user data
+            updateUserData({
+                username: profileData.username,
+                first_name: profileData.firstName,
+                last_name: profileData.lastName,
+                phone_number: profileData.phoneNumber,
+                user_id: user!.user_id,
+            });
+        }
     }
+
 
     if (isLoading) {
         return (
@@ -165,9 +202,9 @@ export function ProfileEdit() {
 
                 {/* Save Button */}
                 <div className="flex justify-end pt-4">
-                    <Button onClick={handleSave} className="gap-2" disabled={isPending}>
+                    <Button onClick={handleSave} className="gap-2" disabled={isPending || isAvatarPending}>
                         <Save className="w-4 h-4" />
-                        {isPending ? "Saving..." : "Save Changes"}
+                        {(isPending || isAvatarPending) ? "Saving..." : "Save Changes"}
                     </Button>
                 </div>
             </div>

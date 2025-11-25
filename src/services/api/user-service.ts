@@ -40,5 +40,25 @@ export function useChangeUserData() {
 }
 
 export function useChangeAvatar() {
+    return useMutation({
+        mutationFn: async (file: File) => {
+            const formData = new FormData();
+            formData.append("file", file);
 
+            const response = await apiClient.post("/user/avatar", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+            return response.data.data;
+        },
+        onSuccess: (response) => {
+            console.log(response);
+            toast.success("Profile picture updated successfully");
+        },
+        onError: (error) => {
+            toast.error(error.message || "Failed to update profile picture");
+            console.error(error);
+        }
+    });
 }
