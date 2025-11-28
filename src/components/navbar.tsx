@@ -175,7 +175,8 @@ export default function Navbar() {
                                         </DropdownMenuLabel>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem><Link href="/profile">Profile</Link></DropdownMenuItem>
-                                        <DropdownMenuItem>Seller</DropdownMenuItem>
+                                        <DropdownMenuItem><Link href="/seller">Seller</Link></DropdownMenuItem>
+                                        <DropdownMenuItem><Link href="/feedback">Feedback</Link></DropdownMenuItem>
                                         <DropdownMenuItem
                                             className="bg-red-500"
                                             onClick={() => onLogout()}
