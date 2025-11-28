@@ -10,10 +10,12 @@ import Footer from "./footer"
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname() ?? ""
     const isAuthRoute = pathname === "/login" || pathname === "/register" || pathname.startsWith("/auth")
+    const isSellerRoute = pathname.startsWith("/seller")
+
     return (
         <TanstackProviders>
             <ThemeProvider>
-                {isAuthRoute ? (
+                {isAuthRoute || isSellerRoute ? (
                     <>{children}</>
                 ) : (
                     <>

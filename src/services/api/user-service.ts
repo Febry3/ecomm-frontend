@@ -1,4 +1,5 @@
 import apiClient from "@/lib/api-client";
+import { useAuthStore } from "@/stores/auth-store";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -23,12 +24,18 @@ export function useGetUserData() {
 }
 
 export function useChangeUserData() {
+    const { user, setUser } = useAuthStore();
     return useMutation({
         mutationFn: async (request: UserUpdateRequest) => {
             const response = await apiClient.put("/user", request);
             return response.data.data;
         },
         onSuccess: (response) => {
+            setUser({
+                ...user!,
+                username: response.username,
+                profile_url: response.profile_url,
+            });
             console.log(response);
             toast.success("profile data updated successfully");
         },
@@ -40,6 +47,7 @@ export function useChangeUserData() {
 }
 
 export function useChangeAvatar() {
+    const { user, setUser } = useAuthStore();
     return useMutation({
         mutationFn: async (file: File) => {
             const formData = new FormData();
@@ -53,7 +61,10 @@ export function useChangeAvatar() {
             return response.data.data;
         },
         onSuccess: (response) => {
-            console.log(response);
+            setUser({
+                ...user!,
+                profile_url: response.profile_url,
+            });
             toast.success("Profile picture updated successfully");
         },
         onError: (error) => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Plus, Edit, Trash2, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,72 +8,41 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { LocationPicker } from "@/components/map/location-picker"
 import { toast } from "sonner"
-
-interface Address {
-    id: string
-    label: string
-    fullName: string
-    phone: string
-    streetAddress: string
-    rt?: string
-    rw?: string
-    village: string
-    district: string
-    city: string
-    province: string
-    postalCode: string
-    notes?: string
-    isDefault: boolean
-}
+import { Address } from "@/types/address"
+import { useAddUserAddress, useGetAllUserAddress } from "@/services/api/address-service"
 
 export function AddressManagement() {
-    const [addresses, setAddresses] = useState<Address[]>([
-        {
-            id: "1",
-            label: "Home",
-            fullName: "John Doe",
-            phone: "+6281234567890",
-            streetAddress: "Jl. Merdeka No. 123",
-            rt: "001",
-            rw: "002",
-            village: "Gambir",
-            district: "Gambir",
-            city: "Jakarta Pusat",
-            province: "DKI Jakarta",
-            postalCode: "10110",
-            notes: "Near the monument",
-            isDefault: true,
-        },
-    ])
+    const { data: userAddressData } = useGetAllUserAddress()
+    const [addresses, setAddresses] = useState<Address[]>([]);
+    const { mutate: addUserAddress } = useAddUserAddress();
 
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingAddress, setEditingAddress] = useState<Address | null>(null)
-    const [formData, setFormData] = useState<Omit<Address, "id">>({
-        label: "",
-        fullName: "",
-        phone: "",
-        streetAddress: "",
+    const [formData, setFormData] = useState<Omit<Address, "address_id" | "user_id" | "created_at" | "updated_at">>({
+        address_label: "",
+        receiver_name: "",
+        street_address: "",
         rt: "",
         rw: "",
         village: "",
         district: "",
         city: "",
         province: "",
-        postalCode: "",
+        postal_code: "",
         notes: "",
-        isDefault: false,
+        is_default: false,
     })
     const [showMapPicker, setShowMapPicker] = useState(false)
 
     const handleLocationSelect = (addressData: any) => {
         setFormData({
             ...formData,
-            streetAddress: addressData.streetAddress || "",
+            street_address: addressData.streetAddress || "",
             village: addressData.village || "",
             district: addressData.district || "",
             city: addressData.city || "",
             province: addressData.province || "",
-            postalCode: addressData.postalCode || "",
+            postal_code: addressData.postalCode || "",
         })
         setShowMapPicker(false)
         toast.success("Address details have been filled from the map.")
@@ -83,49 +52,51 @@ export function AddressManagement() {
         setEditingAddress(null)
         setShowMapPicker(false)
         setFormData({
-            label: "",
-            fullName: "",
-            phone: "",
-            streetAddress: "",
+            address_label: "",
+            receiver_name: "",
+            street_address: "",
             rt: "",
             rw: "",
             village: "",
             district: "",
             city: "",
             province: "",
-            postalCode: "",
+            postal_code: "",
             notes: "",
-            isDefault: false,
+            is_default: false,
         })
         setIsDialogOpen(true)
     }
 
     const handleEditAddress = (address: Address) => {
         setEditingAddress(address)
-        setFormData(address)
+        const { address_id, user_id, created_at, updated_at, ...rest } = address
+        setFormData(rest)
         setShowMapPicker(false)
         setIsDialogOpen(true)
     }
 
     const handleSaveAddress = () => {
         if (editingAddress) {
-            setAddresses(addresses.map((addr) => (addr.id === editingAddress.id ? { ...formData, id: addr.id } : addr)))
+            setAddresses(addresses.map((addr) => (addr.address_id === editingAddress.address_id ? { ...addr, ...formData } : addr)))
             toast.success("Your address has been updated successfully.")
         } else {
-            const newAddress: Address = {
-                ...formData,
-                id: Date.now().toString(),
-            }
-            setAddresses([...addresses, newAddress])
+            addUserAddress(formData);
             toast.success("New address has been added successfully.")
         }
         setIsDialogOpen(false)
     }
 
     const handleDeleteAddress = (id: string) => {
-        setAddresses(addresses.filter((addr) => addr.id !== id))
+        setAddresses(addresses.filter((addr) => addr.address_id !== id))
         toast.success("Address has been removed.")
     }
+
+    useEffect(() => {
+        if (userAddressData) {
+            setAddresses(userAddressData);
+        }
+    }, [userAddressData]);
 
     return (
         <div className="bg-card border border-border rounded-lg p-6">
@@ -162,40 +133,29 @@ export function AddressManagement() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="label">Address Label</Label>
+                                    <Label htmlFor="address_label">Address Label</Label>
                                     <Input
-                                        id="label"
-                                        value={formData.label}
-                                        onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                                        id="address_label"
+                                        value={formData.address_label}
+                                        onChange={(e) => setFormData({ ...formData, address_label: e.target.value })}
                                         placeholder="e.g., Home, Office"
                                     />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="fullName">Full Name</Label>
-                                        <Input
-                                            id="fullName"
-                                            value={formData.fullName}
-                                            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                            placeholder="Enter full name"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="phone">Phone Number</Label>
-                                        <Input
-                                            id="phone"
-                                            value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            placeholder="Enter phone number"
-                                        />
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="receiver_name">Receiver Name</Label>
+                                    <Input
+                                        id="receiver_name"
+                                        value={formData.receiver_name}
+                                        onChange={(e) => setFormData({ ...formData, receiver_name: e.target.value })}
+                                        placeholder="Enter receiver name"
+                                    />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="streetAddress">Street Address</Label>
+                                    <Label htmlFor="street_address">Street Address</Label>
                                     <Input
-                                        id="streetAddress"
-                                        value={formData.streetAddress}
-                                        onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
+                                        id="street_address"
+                                        value={formData.street_address}
+                                        onChange={(e) => setFormData({ ...formData, street_address: e.target.value })}
                                         placeholder="Jalan Name, House Number"
                                     />
                                 </div>
@@ -264,11 +224,11 @@ export function AddressManagement() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="postalCode">Postal Code</Label>
+                                    <Label htmlFor="postal_code">Postal Code</Label>
                                     <Input
-                                        id="postalCode"
-                                        value={formData.postalCode}
-                                        onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                                        id="postal_code"
+                                        value={formData.postal_code}
+                                        onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                                         placeholder="Enter postal code"
                                     />
                                 </div>
@@ -286,12 +246,12 @@ export function AddressManagement() {
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="checkbox"
-                                        id="isDefault"
-                                        checked={formData.isDefault}
-                                        onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+                                        id="is_default"
+                                        checked={formData.is_default}
+                                        onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
                                         className="w-4 h-4"
                                     />
-                                    <Label htmlFor="isDefault" className="cursor-pointer">
+                                    <Label htmlFor="is_default" className="cursor-pointer">
                                         Set as default address
                                     </Label>
                                 </div>
@@ -316,21 +276,20 @@ export function AddressManagement() {
                 ) : (
                     addresses.map((address) => (
                         <div
-                            key={address.id}
+                            key={address.address_id}
                             className="border border-border rounded-lg p-4 hover:border-primary/50 transition-colors"
                         >
                             <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <h3 className="font-semibold">{address.label}</h3>
-                                        {address.isDefault && (
+                                        <h3 className="font-semibold">{address.address_label}</h3>
+                                        {address.is_default && (
                                             <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">Default</span>
                                         )}
                                     </div>
-                                    <p className="text-sm">{address.fullName}</p>
-                                    <p className="text-sm text-muted-foreground">{address.phone}</p>
+                                    <p className="text-sm">{address.receiver_name}</p>
                                     <p className="text-sm text-muted-foreground mt-2">
-                                        {address.streetAddress}
+                                        {address.street_address}
                                         {address.rt && `, RT ${address.rt}`}
                                         {address.rw && `, RW ${address.rw}`}
                                     </p>
@@ -338,7 +297,7 @@ export function AddressManagement() {
                                         {address.village}, {address.district}
                                     </p>
                                     <p className="text-sm text-muted-foreground">
-                                        {address.city}, {address.province} {address.postalCode}
+                                        {address.city}, {address.province} {address.postal_code}
                                     </p>
                                     {address.notes && <p className="text-sm text-muted-foreground italic mt-1">Note: {address.notes}</p>}
                                 </div>
@@ -349,8 +308,8 @@ export function AddressManagement() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        onClick={() => handleDeleteAddress(address.id)}
-                                        disabled={address.isDefault}
+                                        onClick={() => handleDeleteAddress(address.address_id)}
+                                        disabled={address.is_default}
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
