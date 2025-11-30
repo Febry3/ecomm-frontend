@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAuthStore } from "@/stores/auth-store"
 import { DollarSign, ShoppingCart, Star, Package, TrendingUp, AlertCircle } from "lucide-react"
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
@@ -15,6 +16,8 @@ const salesData = [
 ]
 
 export default function SellerDashboard() {
+    const { user } = useAuthStore();
+
     return (
         <div className="space-y-6">
             <div>

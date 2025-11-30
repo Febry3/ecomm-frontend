@@ -3,6 +3,7 @@ export interface User {
     username: string;
     email: string;
     profile_url?: string;
+    role: string;
 }
 
 export interface GoogleLoginResponse {
@@ -14,4 +15,5 @@ export interface GoogleLoginResponse {
     phone_number?: string;
     username?: string;
     profile_url?: string;
+    role: string;
 }

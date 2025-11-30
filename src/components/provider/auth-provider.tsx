@@ -15,15 +15,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     useEffect(() => {
         const fetchAccessToken = async () => {
-            // Wait for hydration/token
             if (!accessToken) return;
 
-            // Always sync the cookie with the store token
             setToken(accessToken);
 
-            // Fetch user data if:
-            // 1. We haven't initialized yet (standard check on mount)
-            // 2. OR user is null (recovery mode for the specific issue)
             if (!hasInitialized.current || !user) {
                 hasInitialized.current = true;
 

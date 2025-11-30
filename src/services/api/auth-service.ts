@@ -17,7 +17,7 @@ export function useLogin() {
             return response.data.data;
         },
         onSuccess: (data) => {
-            setUser({ user_id: data.id, username: data.username, email: data.email });
+            setUser({ user_id: data.id, username: data.username, email: data.email, role: data.role });
             setToken(data.access_token);
             toast("Login successfully");
             window.location.href = "/";
@@ -83,15 +83,14 @@ export function useGoogleLoginOrRegister() {
             return response.data.data as GoogleLoginResponse;
         },
         onSuccess: (data) => {
-            console.log("login on google", data);
             setUser({
                 username: data.first_name,
                 email: data.email,
                 user_id: data.id,
-                profile_url: data.profile_url
+                profile_url: data.profile_url,
+                role: data.role,
             });
             setToken(data.access_token);
-            console.log("on success:", data);
             toast.success("Auth Success");
             window.location.href = "/";
         },
