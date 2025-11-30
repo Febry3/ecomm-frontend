@@ -12,7 +12,7 @@ export default function SellerGuard({ children }: { children: React.ReactNode })
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
-        if (pathname === "/seller/register") {
+        if (pathname === "/seller/register" || pathname === "/seller/onboard") {
             setIsChecking(false);
             return;
         }

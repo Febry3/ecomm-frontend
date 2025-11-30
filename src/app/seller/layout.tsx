@@ -22,8 +22,15 @@ const navigation = [
 import SellerGuard from "@/components/auth/seller-guard"
 
 export default function SellerLayout({ children }: { children: React.ReactNode }) {
-    const [sidebarOpen, setSidebarOpen] = useState(false)
-    const pathname = usePathname()
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const pathname = usePathname();
+
+    const isRegister = pathname === "/seller/register";
+    const isOnBoard = pathname === "/seller/onboard";
+
+    if (isRegister || isOnBoard) {
+        return <>{children}</>;
+    }
 
     return (
         <SellerGuard>
