@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,10 +11,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Upload, Store, Mail, Award as IdCard } from "lucide-react"
 import { toast } from "sonner"
+import { useAuthStore } from "@/stores/auth-store"
 
 export default function SellerRegisterPage() {
+    const { user } = useAuthStore()
     const router = useRouter()
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    useEffect(() => {
+        if (user?.role === "seller") {
+            router.push("/seller")
+        }
+    }, [user, router])
 
     const [formData, setFormData] = useState({
         storeName: "",
@@ -97,6 +105,7 @@ export default function SellerRegisterPage() {
             router.push("/seller")
         }, 2000)
     }
+
 
     return (
         <div className="min-h-screen bg-background py-12 px-4">
@@ -320,3 +329,7 @@ export default function SellerRegisterPage() {
         </div>
     )
 }
+function useAuth(): { user: any } {
+    throw new Error("Function not implemented.")
+}
+

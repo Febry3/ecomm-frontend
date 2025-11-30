@@ -62,11 +62,6 @@ export default function LoginPage() {
         flow: "auth-code",
     });
 
-    const onTest = async () => {
-        const response = await apiClient.get("/test");
-        console.log(response);
-    };
-
     return (
         <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center px-4 font-sans">
             <TrailingCursor />
@@ -197,12 +192,6 @@ export default function LoginPage() {
                                         className="w-full h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-md shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-50 cursor-pointer"
                                     >
                                         {isSubmitting ? "Signing in..." : "Sign in"}
-                                    </Button>
-
-                                    {/* test */}
-                                    <Button onClick={onTest} type="button">
-                                        {" "}
-                                        Test{" "}
                                     </Button>
                                     {/* Legal Text */}
                                     <p className="text-xs text-muted-foreground text-center leading-relaxed">
