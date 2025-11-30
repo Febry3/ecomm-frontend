@@ -1,6 +1,4 @@
-import { url } from "inspector";
 import type { NextConfig } from "next";
-import { ur } from "zod/v4/locales";
 
 const nextConfig: NextConfig = {
   /* config options here */
