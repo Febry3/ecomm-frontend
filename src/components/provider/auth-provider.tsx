@@ -10,32 +10,31 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-    const { setUser, setToken, accessToken, clearAuth } = useAuthStore();
+    const { setUser, setToken, accessToken, user, clearAuth } = useAuthStore();
     const hasInitialized = useRef(false);
 
     useEffect(() => {
         const fetchAccessToken = async () => {
-            if (hasInitialized.current) return;
-            hasInitialized.current = true;
+            if (!accessToken) return;
 
-            try {
-                if (accessToken) {
-                    setToken(accessToken);
-                }
+            setToken(accessToken);
 
-                if (accessToken) {
-                    const response = await apiClient.post('/auth/refresh');
+            if (!hasInitialized.current || !user) {
+                hasInitialized.current = true;
+
+                try {
+                    const response = await apiClient.get('/user');
                     const userData = response.data.data as User;
                     setUser(userData);
+                } catch (error) {
+                    clearAuth();
+                    console.error('Failed to fetch user data:', error);
                 }
-            } catch (error) {
-                clearAuth();
-                console.error('Failed to fetch user data:', error);
             }
         };
 
         fetchAccessToken();
-    }, [setUser, setToken, accessToken]);
+    }, [setUser, setToken, accessToken, user, clearAuth]);
 
     return <>{children}</>;
 }

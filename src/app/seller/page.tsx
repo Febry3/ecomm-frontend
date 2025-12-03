@@ -1,7 +1,9 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAuthStore } from "@/stores/auth-store"
 import { DollarSign, ShoppingCart, Star, Package, TrendingUp, AlertCircle } from "lucide-react"
+import { NextResponse } from "next/server"
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 const salesData = [
