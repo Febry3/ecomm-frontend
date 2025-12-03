@@ -12,11 +12,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Upload, Store, Mail, Award as IdCard } from "lucide-react"
 import { toast } from "sonner"
 import { useAuthStore } from "@/stores/auth-store"
+import { useRegisterSeller, useUploadSellerLogo } from "@/services/api/seller-service"
 
 export default function SellerRegisterPage() {
     const { user } = useAuthStore()
     const router = useRouter()
-    const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
         if (user?.role === "seller") {
@@ -81,29 +81,50 @@ export default function SellerRegisterPage() {
         }
     }
 
+    const { mutate: registerSeller, isPending: isRegistering } = useRegisterSeller()
+    const { mutateAsync: uploadLogo, isPending: isUploading } = useUploadSellerLogo()
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setIsSubmitting(true)
 
         // Validation
         if (!formData.storeName || !formData.storeSlug || !formData.businessEmail || !formData.businessPhone) {
             toast.error("Please fill in all required fields")
-            setIsSubmitting(false)
             return
         }
 
-        if (!ktpFile) {
-            toast.error("Please upload your KTP (ID Card)")
-            setIsSubmitting(false)
+        if (!logoFile) {
+            toast.error("Please upload your store logo")
             return
         }
 
-        // Simulate API call
-        setTimeout(() => {
-            toast.success("Your seller registration has been submitted for review.")
-            setIsSubmitting(false)
-            router.push("/seller")
-        }, 2000)
+        // if (!ktpFile) {
+        //     toast.error("Please upload your KTP (ID Card)")
+        //     return
+        // }
+
+        try {
+            // 1. Upload Logo
+            // const logoResponse = await uploadLogo(logoFile)
+            // const logoUrl = logoResponse.url
+
+            // 2. Register Seller
+            registerSeller({
+                store_name: formData.storeName,
+                store_slug: formData.storeSlug,
+                description: formData.description,
+                logo_url: "test",
+                business_email: formData.businessEmail,
+                business_phone: formData.businessPhone,
+            }, {
+                onSuccess: () => {
+                    router.push("/seller")
+                }
+            })
+
+        } catch (error) {
+            console.error("Registration failed:", error)
+        }
     }
 
 
@@ -319,8 +340,8 @@ export default function SellerRegisterPage() {
                             <Button type="button" variant="outline" onClick={() => router.push("/")}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={isSubmitting} className="min-w-[150px]">
-                                {isSubmitting ? "Submitting..." : "Submit Application"}
+                            <Button type="submit" disabled={isRegistering || isUploading} className="min-w-[150px]">
+                                {isRegistering || isUploading ? "Submitting..." : "Submit Application"}
                             </Button>
                         </div>
                     </div>

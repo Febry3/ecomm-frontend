@@ -27,9 +27,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={_urbanist.className}>
         <Toaster />
-        <FeedbackModal />
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_CLIENT_ID!}>
           <AuthProvider>
+            <FeedbackModal />
             <ConditionalLayout>{children}</ConditionalLayout>
           </AuthProvider>
         </GoogleOAuthProvider>

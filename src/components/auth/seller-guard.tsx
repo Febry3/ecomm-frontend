@@ -20,7 +20,7 @@ export default function SellerGuard({ children }: { children: React.ReactNode })
         if (!isAuthenticated) {
             router.push("/login");
         } else if (user?.role !== "seller") {
-            router.push("/");
+            router.push("/seller/onboard");
         } else {
             setIsChecking(false);
         }
