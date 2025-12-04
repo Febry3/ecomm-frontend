@@ -1,14 +1,23 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import { Camera, Save } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { toast } from "sonner"
 import { useChangeUserData, useGetUserData, useChangeAvatar } from "@/services/api/user-service"
 import { useAuthStore } from "@/stores/auth-store"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+
+const profileSchema = z.object({
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    phoneNumber: z.string().min(10, "Phone number must be at least 10 characters"),
+})
+
+type ProfileFormValues = z.infer<typeof profileSchema>
 
 export function ProfileEdit() {
     const { data: userData, isLoading, isError, error } = useGetUserData();
@@ -16,31 +25,33 @@ export function ProfileEdit() {
     const { mutate: updateAvatar, isPending: isAvatarPending } = useChangeAvatar();
     const { user } = useAuthStore();
 
-    const [profileData, setProfileData] = useState({
-        username: "",
-        firstName: "",
-        lastName: "",
-        phoneNumber: "",
-        email: "",
-        profilePicture: "",
+    const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string>("");
+
+    const form = useForm<ProfileFormValues>({
+        resolver: zodResolver(profileSchema),
+        defaultValues: {
+            username: "",
+            firstName: "",
+            lastName: "",
+            phoneNumber: "",
+        },
     })
 
-    // Store the selected file separately
-    const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+    const { register, handleSubmit, reset, formState: { errors } } = form
 
     // Populate form when user data is fetched
     useEffect(() => {
         if (userData) {
-            setProfileData({
+            reset({
                 username: userData.username || "",
                 firstName: userData.first_name || "",
                 lastName: userData.last_name || "",
                 phoneNumber: userData.phone_number || "",
-                email: userData.email || "",
-                profilePicture: userData.profile_url || "",
             });
+            setAvatarPreview(userData.profile_url || "");
         }
-    }, [userData]);
+    }, [userData, reset]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -51,23 +62,23 @@ export function ProfileEdit() {
             // Create preview
             const reader = new FileReader()
             reader.onloadend = () => {
-                setProfileData({ ...profileData, profilePicture: reader.result as string })
+                setAvatarPreview(reader.result as string)
             }
             reader.readAsDataURL(file)
         }
     }
 
-    const handleSave = async () => {
+    const onSubmit = (data: ProfileFormValues) => {
         // First, upload avatar if a new one was selected
         if (selectedAvatarFile) {
             updateAvatar(selectedAvatarFile, {
                 onSuccess: () => {
                     // After avatar upload succeeds, update user data
                     updateUserData({
-                        username: profileData.username,
-                        first_name: profileData.firstName,
-                        last_name: profileData.lastName,
-                        phone_number: profileData.phoneNumber,
+                        username: data.username,
+                        first_name: data.firstName,
+                        last_name: data.lastName,
+                        phone_number: data.phoneNumber,
                         user_id: user!.user_id,
                     });
                     // Clear the selected file
@@ -76,10 +87,10 @@ export function ProfileEdit() {
                 onError: () => {
                     // If avatar upload fails, still try to update user data
                     updateUserData({
-                        username: profileData.username,
-                        first_name: profileData.firstName,
-                        last_name: profileData.lastName,
-                        phone_number: profileData.phoneNumber,
+                        username: data.username,
+                        first_name: data.firstName,
+                        last_name: data.lastName,
+                        phone_number: data.phoneNumber,
                         user_id: user!.user_id,
                     });
                 }
@@ -87,10 +98,10 @@ export function ProfileEdit() {
         } else {
             // No avatar change, just update user data
             updateUserData({
-                username: profileData.username,
-                first_name: profileData.firstName,
-                last_name: profileData.lastName,
-                phone_number: profileData.phoneNumber,
+                username: data.username,
+                first_name: data.firstName,
+                last_name: data.lastName,
+                phone_number: data.phoneNumber,
                 user_id: user!.user_id,
             });
         }
@@ -121,14 +132,14 @@ export function ProfileEdit() {
         <div className="bg-card border border-border rounded-lg p-6">
             <h2 className="text-2xl font-bold mb-6">Edit Profile</h2>
 
-            <div className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {/* Profile Picture */}
                 <div className="flex items-center gap-4">
                     <Avatar className="w-24 h-24">
-                        <AvatarImage src={profileData.profilePicture || "/placeholder.svg"} alt={profileData.username} />
+                        <AvatarImage src={avatarPreview || "/placeholder.svg"} alt={userData?.username} />
                         <AvatarFallback>
-                            {profileData.firstName[0] || "U"}
-                            {profileData.lastName[0] || "U"}
+                            {userData?.first_name?.[0] || "U"}
+                            {userData?.last_name?.[0] || "U"}
                         </AvatarFallback>
                     </Avatar>
                     <div>
@@ -154,10 +165,12 @@ export function ProfileEdit() {
                     <Label htmlFor="username">Username</Label>
                     <Input
                         id="username"
-                        value={profileData.username}
-                        onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
                         placeholder="Enter username"
+                        {...register("username")}
                     />
+                    {errors.username && (
+                        <p className="text-xs text-destructive">{errors.username.message}</p>
+                    )}
                 </div>
 
                 {/* First Name & Last Name */}
@@ -166,19 +179,23 @@ export function ProfileEdit() {
                         <Label htmlFor="firstName">First Name</Label>
                         <Input
                             id="firstName"
-                            value={profileData.firstName}
-                            onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
                             placeholder="Enter first name"
+                            {...register("firstName")}
                         />
+                        {errors.firstName && (
+                            <p className="text-xs text-destructive">{errors.firstName.message}</p>
+                        )}
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="lastName">Last Name</Label>
                         <Input
                             id="lastName"
-                            value={profileData.lastName}
-                            onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
                             placeholder="Enter last name"
+                            {...register("lastName")}
                         />
+                        {errors.lastName && (
+                            <p className="text-xs text-destructive">{errors.lastName.message}</p>
+                        )}
                     </div>
                 </div>
 
@@ -187,27 +204,29 @@ export function ProfileEdit() {
                     <Label htmlFor="phoneNumber">Phone Number</Label>
                     <Input
                         id="phoneNumber"
-                        value={profileData.phoneNumber}
-                        onChange={(e) => setProfileData({ ...profileData, phoneNumber: e.target.value })}
                         placeholder="Enter phone number"
+                        {...register("phoneNumber")}
                     />
+                    {errors.phoneNumber && (
+                        <p className="text-xs text-destructive">{errors.phoneNumber.message}</p>
+                    )}
                 </div>
 
                 {/* Email (Read-only) */}
                 <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" value={profileData.email} disabled className="bg-muted cursor-not-allowed" />
+                    <Input id="email" value={userData?.email || ""} disabled className="bg-muted cursor-not-allowed" />
                     <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                 </div>
 
                 {/* Save Button */}
                 <div className="flex justify-end pt-4">
-                    <Button onClick={handleSave} className="gap-2" disabled={isPending || isAvatarPending}>
+                    <Button type="submit" className="gap-2" disabled={isPending || isAvatarPending}>
                         <Save className="w-4 h-4" />
                         {(isPending || isAvatarPending) ? "Saving..." : "Save Changes"}
                     </Button>
                 </div>
-            </div>
+            </form>
         </div>
     )
 }
