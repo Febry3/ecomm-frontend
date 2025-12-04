@@ -13,6 +13,35 @@ import { Upload, Store, Mail, Award as IdCard } from "lucide-react"
 import { toast } from "sonner"
 import { useAuthStore } from "@/stores/auth-store"
 import { useRegisterSeller, useUploadSellerLogo } from "@/services/api/seller-service"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+
+const sellerRegisterSchema = z.object({
+    storeName: z.string().min(3, "Store name must be at least 3 characters"),
+    storeSlug: z.string()
+        .min(3, "Store slug must be at least 3 characters")
+        .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens are allowed"),
+    description: z.string().optional(),
+    businessEmail: z.string().email("Invalid email address"),
+    businessPhone: z.string().min(10, "Phone number must be at least 10 characters"),
+    logo: z.any()
+        .refine((file) => file instanceof File, "Store logo is required")
+        .refine((file) => file?.size <= 5000000, "Max file size is 5MB")
+        .refine(
+            (file) => ["image/jpeg", "image/png", "image/webp"].includes(file?.type),
+            "Only .jpg, .png, and .webp formats are supported"
+        ),
+    ktp: z.any()
+        .refine((file) => file instanceof File, "KTP is required")
+        .refine((file) => file?.size <= 5000000, "Max file size is 5MB")
+        .refine(
+            (file) => ["image/jpeg", "image/png", "image/webp"].includes(file?.type),
+            "Only .jpg, .png, and .webp formats are supported"
+        ),
+})
+
+type SellerRegisterFormValues = z.infer<typeof sellerRegisterSchema>
 
 export default function SellerRegisterPage() {
     const { user } = useAuthStore()
@@ -24,43 +53,41 @@ export default function SellerRegisterPage() {
         }
     }, [user, router])
 
-    const [formData, setFormData] = useState({
-        storeName: "",
-        storeSlug: "",
-        description: "",
-        businessEmail: "",
-        businessPhone: "",
-    })
-
-    const [logoFile, setLogoFile] = useState<File | null>(null)
     const [logoPreview, setLogoPreview] = useState<string>("")
-    const [ktpFile, setKtpFile] = useState<File | null>(null)
     const [ktpPreview, setKtpPreview] = useState<string>("")
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        }))
+    const { mutate: registerSeller, isPending: isRegistering } = useRegisterSeller()
+    const { mutateAsync: uploadLogo, isPending: isUploading } = useUploadSellerLogo()
 
-        // Auto-generate slug from store name
-        if (name === "storeName") {
-            const slug = value
+    const form = useForm<SellerRegisterFormValues>({
+        resolver: zodResolver(sellerRegisterSchema),
+        defaultValues: {
+            storeName: "",
+            storeSlug: "",
+            description: "",
+            businessEmail: "",
+            businessPhone: "",
+        },
+    })
+
+    const { register, handleSubmit, setValue, watch, formState: { errors } } = form
+
+    // Auto-generate slug from store name
+    const storeName = watch("storeName")
+    useEffect(() => {
+        if (storeName) {
+            const slug = storeName
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/(^-|-$)/g, "")
-            setFormData((prev) => ({
-                ...prev,
-                storeSlug: slug,
-            }))
+            setValue("storeSlug", slug, { shouldValidate: true })
         }
-    }
+    }, [storeName, setValue])
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            setLogoFile(file)
+            setValue("logo", file, { shouldValidate: true })
             const reader = new FileReader()
             reader.onloadend = () => {
                 setLogoPreview(reader.result as string)
@@ -72,7 +99,7 @@ export default function SellerRegisterPage() {
     const handleKtpUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            setKtpFile(file)
+            setValue("ktp", file, { shouldValidate: true })
             const reader = new FileReader()
             reader.onloadend = () => {
                 setKtpPreview(reader.result as string)
@@ -81,41 +108,15 @@ export default function SellerRegisterPage() {
         }
     }
 
-    const { mutate: registerSeller, isPending: isRegistering } = useRegisterSeller()
-    const { mutateAsync: uploadLogo, isPending: isUploading } = useUploadSellerLogo()
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        // Validation
-        if (!formData.storeName || !formData.storeSlug || !formData.businessEmail || !formData.businessPhone) {
-            toast.error("Please fill in all required fields")
-            return
-        }
-
-        if (!logoFile) {
-            toast.error("Please upload your store logo")
-            return
-        }
-
-        // if (!ktpFile) {
-        //     toast.error("Please upload your KTP (ID Card)")
-        //     return
-        // }
-
+    const onSubmit = async (data: SellerRegisterFormValues) => {
         try {
-            // 1. Upload Logo
-            // const logoResponse = await uploadLogo(logoFile)
-            // const logoUrl = logoResponse.url
-
-            // 2. Register Seller
             registerSeller({
-                store_name: formData.storeName,
-                store_slug: formData.storeSlug,
-                description: formData.description,
-                logo_url: "test",
-                business_email: formData.businessEmail,
-                business_phone: formData.businessPhone,
+                store_name: data.storeName,
+                store_slug: data.storeSlug,
+                description: data.description || "",
+                logo_url: "test", // Replace with actual logoUrl when ready
+                business_email: data.businessEmail,
+                business_phone: data.businessPhone,
             }, {
                 onSuccess: () => {
                     router.push("/seller")
@@ -124,9 +125,9 @@ export default function SellerRegisterPage() {
 
         } catch (error) {
             console.error("Registration failed:", error)
+            toast.error("Failed to register seller. Please try again.")
         }
     }
-
 
     return (
         <div className="min-h-screen bg-background py-12 px-4">
@@ -141,7 +142,7 @@ export default function SellerRegisterPage() {
                     <p className="text-muted-foreground">Fill in the information below to start selling on LootBox</p>
                 </div>
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="space-y-6">
                         {/* Store Information */}
                         <Card>
@@ -160,12 +161,12 @@ export default function SellerRegisterPage() {
                                         </Label>
                                         <Input
                                             id="storeName"
-                                            name="storeName"
                                             placeholder="Enter your store name"
-                                            value={formData.storeName}
-                                            onChange={handleInputChange}
-                                            required
+                                            {...register("storeName")}
                                         />
+                                        {errors.storeName && (
+                                            <p className="text-xs text-destructive">{errors.storeName.message}</p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -174,14 +175,14 @@ export default function SellerRegisterPage() {
                                         </Label>
                                         <Input
                                             id="storeSlug"
-                                            name="storeSlug"
                                             placeholder="store-url-slug"
-                                            value={formData.storeSlug}
-                                            onChange={handleInputChange}
-                                            required
+                                            {...register("storeSlug")}
                                         />
+                                        {errors.storeSlug && (
+                                            <p className="text-xs text-destructive">{errors.storeSlug.message}</p>
+                                        )}
                                         <p className="text-xs text-muted-foreground">
-                                            Your store will be available at: lootbox.com/store/{formData.storeSlug || "your-slug"}
+                                            Your store will be available at: lootbox.com/store/{watch("storeSlug") || "your-slug"}
                                         </p>
                                     </div>
                                 </div>
@@ -190,16 +191,17 @@ export default function SellerRegisterPage() {
                                     <Label htmlFor="description">Store Description</Label>
                                     <Textarea
                                         id="description"
-                                        name="description"
                                         placeholder="Tell customers about your store..."
-                                        value={formData.description}
-                                        onChange={handleInputChange}
                                         rows={4}
+                                        {...register("description")}
                                     />
+                                    {errors.description && (
+                                        <p className="text-xs text-destructive">{errors.description.message}</p>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="logo">Store Logo</Label>
+                                    <Label htmlFor="logo">Store Logo <span className="text-destructive">*</span></Label>
                                     <div className="flex items-center gap-4">
                                         {logoPreview && (
                                             <div className="h-20 w-20 overflow-hidden rounded-lg border-2 border-border">
@@ -218,6 +220,9 @@ export default function SellerRegisterPage() {
                                                 onChange={handleLogoUpload}
                                                 className="cursor-pointer"
                                             />
+                                            {errors.logo && (
+                                                <p className="text-xs text-destructive mt-1">{errors.logo.message as string}</p>
+                                            )}
                                             <p className="mt-1 text-xs text-muted-foreground">
                                                 Upload a square image (recommended: 500x500px)
                                             </p>
@@ -244,13 +249,13 @@ export default function SellerRegisterPage() {
                                         </Label>
                                         <Input
                                             id="businessEmail"
-                                            name="businessEmail"
                                             type="email"
                                             placeholder="business@example.com"
-                                            value={formData.businessEmail}
-                                            onChange={handleInputChange}
-                                            required
+                                            {...register("businessEmail")}
                                         />
+                                        {errors.businessEmail && (
+                                            <p className="text-xs text-destructive">{errors.businessEmail.message}</p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -259,13 +264,13 @@ export default function SellerRegisterPage() {
                                         </Label>
                                         <Input
                                             id="businessPhone"
-                                            name="businessPhone"
                                             type="tel"
                                             placeholder="+62 812-3456-7890"
-                                            value={formData.businessPhone}
-                                            onChange={handleInputChange}
-                                            required
+                                            {...register("businessPhone")}
                                         />
+                                        {errors.businessPhone && (
+                                            <p className="text-xs text-destructive">{errors.businessPhone.message}</p>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>
@@ -300,7 +305,7 @@ export default function SellerRegisterPage() {
                                                 type="button"
                                                 variant="outline"
                                                 onClick={() => {
-                                                    setKtpFile(null)
+                                                    setValue("ktp", undefined as any, { shouldValidate: true })
                                                     setKtpPreview("")
                                                 }}
                                                 className="w-full"
@@ -323,10 +328,12 @@ export default function SellerRegisterPage() {
                                                 accept="image/*"
                                                 onChange={handleKtpUpload}
                                                 className="hidden"
-                                                required
                                             />
                                             <p className="text-xs text-muted-foreground">PNG, JPG, or JPEG (max 5MB)</p>
                                         </div>
+                                    )}
+                                    {errors.ktp && (
+                                        <p className="text-xs text-destructive">{errors.ktp.message as string}</p>
                                     )}
                                     <p className="text-xs text-muted-foreground">
                                         Your KTP information will be kept confidential and used only for verification purposes.
@@ -349,8 +356,5 @@ export default function SellerRegisterPage() {
             </div>
         </div>
     )
-}
-function useAuth(): { user: any } {
-    throw new Error("Function not implemented.")
 }
 

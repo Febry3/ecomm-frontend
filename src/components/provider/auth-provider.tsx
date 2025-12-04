@@ -35,7 +35,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         fetchAccessToken();
         console.log("refetch user data");
-    }, [setUser, accessToken, user, clearAuth]);
+    }, [setUser, setToken, accessToken, user, clearAuth]);
 
     return <>{children}</>;
 }
