@@ -17,15 +17,17 @@ export function useRegisterSeller() {
     return useMutation({
         mutationFn: async (data: SellerRequest) => {
             const response = await apiClient.post("/seller", data);
-            return response.data;
+            return response.data.data;
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             toast.success("Seller registration submitted successfully");
+            console.log(data)
             setUser({
                 ...user!,
-                role: "seller"
+                role: "seller",
+                seller_id: data.id
             });
-            window.location.href = "/seller";
+            // window.location.href = "/seller";
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || "Failed to register seller");
