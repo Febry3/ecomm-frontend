@@ -1,15 +1,15 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Search, MoreVertical, Edit, Trash2, Eye } from "lucide-react"
+import { Plus, Search, MoreVertical, Edit, Trash2 } from "lucide-react"
 import { AddProductDialog } from "@/components/seller/add-product-dialog"
-import { EditProductDialog } from "@/components/seller/edit-product-dialog"
 import { DeleteProductDialog } from "@/components/seller/delete-product-dialog"
 
 const products = [
@@ -62,15 +62,14 @@ const products = [
 ]
 
 export default function ProductsPage() {
+    const router = useRouter()
     const [searchQuery, setSearchQuery] = useState("")
     const [addDialogOpen, setAddDialogOpen] = useState(false)
-    const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState<(typeof products)[0] | null>(null)
 
     const handleEdit = (product: (typeof products)[0]) => {
-        setSelectedProduct(product)
-        setEditDialogOpen(true)
+        router.push(`/seller/products/edit/${product.id}`)
     }
 
     const handleDelete = (product: (typeof products)[0]) => {
@@ -110,10 +109,7 @@ export default function ProductsPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Product</TableHead>
-                                <TableHead>SKU</TableHead>
                                 <TableHead>Category</TableHead>
-                                <TableHead>Stock</TableHead>
-                                <TableHead>Price</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -122,16 +118,7 @@ export default function ProductsPage() {
                             {products.map((product) => (
                                 <TableRow key={product.id}>
                                     <TableCell className="font-medium">{product.title}</TableCell>
-                                    <TableCell>{product.sku}</TableCell>
                                     <TableCell>{product.category}</TableCell>
-                                    <TableCell>
-                                        <span
-                                            className={product.stock === 0 ? "text-red-500" : product.stock < 10 ? "text-orange-500" : ""}
-                                        >
-                                            {product.stock}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>Rp {product.price.toLocaleString()}</TableCell>
                                     <TableCell>
                                         <Badge
                                             variant={
@@ -153,10 +140,6 @@ export default function ProductsPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem>
-                                                    <Eye className="h-4 w-4 mr-2" />
-                                                    View
-                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleEdit(product)}>
                                                     <Edit className="h-4 w-4 mr-2" />
                                                     Edit
@@ -177,10 +160,7 @@ export default function ProductsPage() {
 
             <AddProductDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
             {selectedProduct && (
-                <>
-                    <EditProductDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} product={selectedProduct} />
-                    <DeleteProductDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} product={selectedProduct} />
-                </>
+                <DeleteProductDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} product={selectedProduct} />
             )}
         </div>
     )

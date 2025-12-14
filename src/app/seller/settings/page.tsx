@@ -70,19 +70,17 @@ export default function SettingsPage() {
         const file = e.target.files?.[0]
         console.log("File selected:", file)
         if (file) {
-            // Validate file type
             if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
                 toast.error("Only .jpg, .png, and .webp formats are supported")
                 return
             }
-            // Validate file size (5MB max)
+
             if (file.size > 5 * 1024 * 1024) {
                 toast.error("Max file size is 5MB")
                 return
             }
 
             setLogoFile(file)
-            // Create preview URL
             const previewUrl = URL.createObjectURL(file)
             console.log("Preview URL:", previewUrl)
             setLogoPreview(previewUrl)
