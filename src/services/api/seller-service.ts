@@ -1,6 +1,6 @@
 import apiClient from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export interface SellerRequest {
@@ -12,11 +12,26 @@ export interface SellerRequest {
     business_phone: string;
 }
 
+export function useGetSeller() {
+    return useSuspenseQuery({
+        queryKey: ["seller-data"],
+        queryFn: async () => {
+            const response = await apiClient.get("/seller");
+            return response.data.data;
+        },
+        retry: 1,
+    });
+}
+
 export function useRegisterSeller() {
     const { setUser, user } = useAuthStore();
     return useMutation({
-        mutationFn: async (data: SellerRequest) => {
-            const response = await apiClient.post("/seller", data);
+        mutationFn: async (data: FormData) => {
+            const response = await apiClient.post("/seller", data, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
             return response.data.data;
         },
         onSuccess: (data) => {
@@ -50,6 +65,22 @@ export function useUploadSellerLogo() {
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || "Failed to upload logo");
+        },
+    });
+}
+
+export function useUpdateSellerStore() {
+    return useMutation({
+        mutationFn: async (data: FormData) => {
+            const response = await apiClient.put("/seller", data, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+            return response.data.data;
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || "Failed to update seller store");
         },
     });
 }
