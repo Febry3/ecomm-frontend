@@ -12,11 +12,22 @@ import { TiptapEditor } from "@/components/tiptap-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Trash2, Upload, X } from "lucide-react"
-import { toast } from "sonner"
+import { useCreateProduct, type ProductVariant } from "@/services/api/product-service"
+
+interface VariantFormData {
+    id: string;
+    sku: string;
+    name: string;
+    price: number;
+    is_active: boolean;
+    current_stock: number;
+    reserved_stock: number;
+    low_stock_threshold: number;
+}
 
 export default function AddProductPage() {
     const router = useRouter()
-    const [loading, setLoading] = useState(false)
+    const { mutate: createProduct, isPending } = useCreateProduct()
 
     const [formData, setFormData] = useState({
         title: "",
@@ -28,7 +39,18 @@ export default function AddProductPage() {
     })
 
     const [images, setImages] = useState<Array<{ id: string; url: string; file?: File; isPrimary: boolean }>>([])
-    const [variants, setVariants] = useState([{ id: "1", name: "", sku: "", price: 0, stock: 0 }])
+    const [variants, setVariants] = useState<VariantFormData[]>([
+        {
+            id: "1",
+            sku: "",
+            name: "",
+            price: 0,
+            is_active: true,
+            current_stock: 0,
+            reserved_stock: 0,
+            low_stock_threshold: 5,
+        }
+    ])
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
@@ -52,7 +74,19 @@ export default function AddProductPage() {
     }
 
     const addVariant = () => {
-        setVariants([...variants, { id: `${Date.now()}`, name: "", sku: "", price: 0, stock: 0 }])
+        setVariants([
+            ...variants,
+            {
+                id: `${Date.now()}`,
+                sku: "",
+                name: "",
+                price: 0,
+                is_active: true,
+                current_stock: 0,
+                reserved_stock: 0,
+                low_stock_threshold: 5,
+            }
+        ])
     }
 
     const removeVariant = (id: string) => {
@@ -61,21 +95,39 @@ export default function AddProductPage() {
         }
     }
 
-    const updateVariant = (id: string, field: string, value: any) => {
+    const updateVariant = (id: string, field: keyof VariantFormData, value: any) => {
         setVariants(variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)))
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setLoading(true)
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500))
+        // Transform variants to match backend structure
+        const transformedVariants: ProductVariant[] = variants.map((v) => ({
+            sku: v.sku,
+            name: v.name,
+            price: v.price,
+            is_active: v.is_active,
+            stock: {
+                current_stock: v.current_stock,
+                reserved_stock: v.reserved_stock,
+                low_stock_threshold: v.low_stock_threshold,
+            },
+        }))
 
-        toast("Product created successfully")
-
-        setLoading(false)
-        router.push("/seller/products")
+        createProduct({
+            title: formData.title,
+            slug: formData.slug,
+            description: formData.description,
+            category_id: formData.categoryId,
+            badge: formData.badge || undefined,
+            is_active: formData.isActive,
+            variants: transformedVariants,
+        }, {
+            onSuccess: () => {
+                router.push("/seller/products")
+            }
+        })
     }
 
     return (
@@ -225,7 +277,7 @@ export default function AddProductPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle>Product Variants</CardTitle>
-                                <CardDescription>Add different variants of your product</CardDescription>
+                                <CardDescription>Add different variants of your product with stock information</CardDescription>
                             </div>
                             <Button type="button" variant="outline" size="sm" onClick={addVariant}>
                                 <Plus className="h-4 w-4 mr-2" />
@@ -234,15 +286,40 @@ export default function AddProductPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {variants.map((variant, index) => (
-                            <div key={variant.id} className="flex gap-4 items-start p-4 rounded-lg border">
-                                <div className="flex-1 grid grid-cols-4 gap-4">
+                        {variants.map((variant) => (
+                            <div key={variant.id} className="p-4 rounded-lg border space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-medium">Variant Details</h4>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Label htmlFor={`active-${variant.id}`} className="text-sm">Active</Label>
+                                            <Switch
+                                                id={`active-${variant.id}`}
+                                                checked={variant.is_active}
+                                                onCheckedChange={(checked) => updateVariant(variant.id, "is_active", checked)}
+                                            />
+                                        </div>
+                                        {variants.length > 1 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeVariant(variant.id)}
+                                                className="text-destructive"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <Label>Variant Name</Label>
                                         <Input
                                             value={variant.name}
                                             onChange={(e) => updateVariant(variant.id, "name", e.target.value)}
-                                            placeholder="e.g., Standard"
+                                            placeholder="e.g., Red / Large"
                                             required
                                         />
                                     </div>
@@ -251,40 +328,52 @@ export default function AddProductPage() {
                                         <Input
                                             value={variant.sku}
                                             onChange={(e) => updateVariant(variant.id, "sku", e.target.value)}
-                                            placeholder="e.g., KB-001-STD"
+                                            placeholder="e.g., GHPX-RED-L"
                                             required
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Price (Rp)</Label>
+                                        <Label>Price</Label>
                                         <Input
                                             type="number"
+                                            step="0.01"
                                             value={variant.price}
-                                            onChange={(e) => updateVariant(variant.id, "price", Number.parseInt(e.target.value) || 0)}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Stock</Label>
-                                        <Input
-                                            type="number"
-                                            value={variant.stock}
-                                            onChange={(e) => updateVariant(variant.id, "stock", Number.parseInt(e.target.value) || 0)}
+                                            onChange={(e) => updateVariant(variant.id, "price", parseFloat(e.target.value) || 0)}
                                             required
                                         />
                                     </div>
                                 </div>
-                                {variants.length > 1 && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeVariant(variant.id)}
-                                        className="text-destructive"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                )}
+
+                                <div className="border-t pt-4">
+                                    <h5 className="text-sm font-medium mb-3">Stock Information</h5>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Current Stock</Label>
+                                            <Input
+                                                type="number"
+                                                value={variant.current_stock}
+                                                onChange={(e) => updateVariant(variant.id, "current_stock", parseInt(e.target.value) || 0)}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Reserved Stock</Label>
+                                            <Input
+                                                type="number"
+                                                value={variant.reserved_stock}
+                                                onChange={(e) => updateVariant(variant.id, "reserved_stock", parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Low Stock Threshold</Label>
+                                            <Input
+                                                type="number"
+                                                value={variant.low_stock_threshold}
+                                                onChange={(e) => updateVariant(variant.id, "low_stock_threshold", parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </CardContent>
@@ -294,11 +383,12 @@ export default function AddProductPage() {
                     <Button type="button" variant="outline" onClick={() => router.back()}>
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={loading}>
-                        {loading ? "Creating..." : "Create Product"}
+                    <Button type="submit" disabled={isPending}>
+                        {isPending ? "Creating..." : "Create Product"}
                     </Button>
                 </div>
             </form>
         </div>
     )
 }
+

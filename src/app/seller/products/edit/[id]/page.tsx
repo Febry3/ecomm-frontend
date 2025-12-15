@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-
+import { Suspense, useState, use } from "react"
 import type React from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,52 +8,41 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { TiptapEditor } from "@/components/tiptap-editor"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Trash2, Upload, X } from "lucide-react"
+import { Plus, Trash2, Upload, X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-
-// Mock data - in real app, fetch by ID
-const mockProducts = {
-    "1": {
-        id: "1",
-        title: "Gaming Keyboard RGB",
-        slug: "gaming-keyboard-rgb",
-        description: "<p>Hotswap mechanical design Knob</p>",
-        categoryId: "cat-1",
-        badge: "Best Seller",
-        isActive: true,
-        images: [
-            { id: "img-1", url: "/gaming-keyboard-rgb.jpg", isPrimary: true },
-            { id: "img-2", url: "/gaming-keyboard-rgb-front.jpg", isPrimary: false },
-        ],
-        variants: [
-            { id: "var-1", name: "Standard", sku: "KB-001-STD", price: 467350, stock: 45 },
-            { id: "var-2", name: "Premium", sku: "KB-001-PRE", price: 567350, stock: 30 },
-        ],
-    },
-}
+import { useGetSellerProduct } from "@/services/api/product-service"
 
 function EditProductForm({ productId }: { productId: string }) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
-
-    // Load product data
-    const product = mockProducts[productId as keyof typeof mockProducts]
+    const { data: product } = useGetSellerProduct(productId)
 
     const [formData, setFormData] = useState({
         title: product?.title || "",
         slug: product?.slug || "",
         description: product?.description || "",
-        categoryId: product?.categoryId || "",
         badge: product?.badge || "",
-        isActive: product?.isActive ?? true,
+        is_active: product?.is_active ?? true,
     })
 
     const [images, setImages] = useState<Array<{ id: string; url: string; file?: File; isPrimary: boolean }>>(
         product?.images || [],
     )
-    const [variants, setVariants] = useState(product?.variants || [{ id: "1", name: "", sku: "", price: 0, stock: 0 }])
+    const [variants, setVariants] = useState(
+        product?.variants?.map((v: any) => ({
+            id: v.id,
+            name: v.name,
+            sku: v.sku,
+            price: v.price,
+            is_active: v.is_active,
+            stock: {
+                current_stock: v.stock?.current_stock || 0,
+                reserved_stock: v.stock?.reserved_stock || 0,
+                low_stock_threshold: v.stock?.low_stock_threshold || 5,
+            },
+        })) || [{ id: "1", name: "", sku: "", price: 0, is_active: true, stock: { current_stock: 0, reserved_stock: 0, low_stock_threshold: 5 } }]
+    )
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
@@ -78,17 +66,36 @@ function EditProductForm({ productId }: { productId: string }) {
     }
 
     const addVariant = () => {
-        setVariants([...variants, { id: `${Date.now()}`, name: "", sku: "", price: 0, stock: 0 }])
+        setVariants([...variants, {
+            id: `${Date.now()}`,
+            name: "",
+            sku: "",
+            price: 0,
+            is_active: true,
+            stock: {
+                current_stock: 0,
+                reserved_stock: 0,
+                low_stock_threshold: 5
+            }
+        }])
     }
 
     const removeVariant = (id: string) => {
         if (variants.length > 1) {
-            setVariants(variants.filter((v) => v.id !== id))
+            setVariants(variants.filter((v: any) => v.id !== id))
         }
     }
 
     const updateVariant = (id: string, field: string, value: any) => {
-        setVariants(variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)))
+        setVariants(variants.map((v: any) => {
+            if (v.id !== id) return v
+            // Handle nested stock fields
+            if (field.startsWith('stock.')) {
+                const stockField = field.replace('stock.', '')
+                return { ...v, stock: { ...v.stock, [stockField]: value } }
+            }
+            return { ...v, [field]: value }
+        }))
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -167,23 +174,6 @@ function EditProductForm({ productId }: { productId: string }) {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="category">Category</Label>
-                                <Select
-                                    value={formData.categoryId}
-                                    onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="cat-1">Keyboards</SelectItem>
-                                        <SelectItem value="cat-2">Mice</SelectItem>
-                                        <SelectItem value="cat-3">Headsets</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
                                 <Label htmlFor="badge">Badge (Optional)</Label>
                                 <Input
                                     id="badge"
@@ -200,8 +190,8 @@ function EditProductForm({ productId }: { productId: string }) {
                                 <p className="text-sm text-muted-foreground">Make this product visible in your store</p>
                             </div>
                             <Switch
-                                checked={formData.isActive}
-                                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                                checked={formData.is_active}
+                                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                             />
                         </div>
                     </CardContent>
@@ -268,7 +258,7 @@ function EditProductForm({ productId }: { productId: string }) {
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {variants.map((variant) => (
+                        {variants.map((variant: any) => (
                             <div key={variant.id} className="flex gap-4 items-start p-4 rounded-lg border">
                                 <div className="flex-1 grid grid-cols-4 gap-4">
                                     <div className="space-y-2">
@@ -302,8 +292,8 @@ function EditProductForm({ productId }: { productId: string }) {
                                         <Label>Stock</Label>
                                         <Input
                                             type="number"
-                                            value={variant.stock}
-                                            onChange={(e) => updateVariant(variant.id, "stock", Number.parseInt(e.target.value) || 0)}
+                                            value={variant.stock?.current_stock || 0}
+                                            onChange={(e) => updateVariant(variant.id, "stock.current_stock", Number.parseInt(e.target.value) || 0)}
                                             required
                                         />
                                     </div>
@@ -337,8 +327,21 @@ function EditProductForm({ productId }: { productId: string }) {
     )
 }
 
-export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params
-
-    return <EditProductForm productId={id} />
+function PageLoader() {
+    return (
+        <div className="flex items-center justify-center h-[400px]">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+    )
 }
+
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params)
+
+    return (
+        <Suspense fallback={<PageLoader />}>
+            <EditProductForm productId={id} />
+        </Suspense>
+    )
+}
+
