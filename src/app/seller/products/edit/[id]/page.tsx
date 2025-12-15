@@ -11,7 +11,18 @@ import { TiptapEditor } from "@/components/tiptap-editor"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Trash2, Upload, X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useGetSellerProduct } from "@/services/api/product-service"
+import { useGetSellerProduct, type ProductVariant } from "@/services/api/product-service"
+
+interface VariantFormData {
+    id: string
+    sku: string
+    name: string
+    price: number
+    is_active: boolean
+    current_stock: number
+    reserved_stock: number
+    low_stock_threshold: number
+}
 
 function EditProductForm({ productId }: { productId: string }) {
     const router = useRouter()
@@ -29,19 +40,27 @@ function EditProductForm({ productId }: { productId: string }) {
     const [images, setImages] = useState<Array<{ id: string; url: string; file?: File; isPrimary: boolean }>>(
         product?.images || [],
     )
-    const [variants, setVariants] = useState(
+
+    const [variants, setVariants] = useState<VariantFormData[]>(
         product?.variants?.map((v: any) => ({
-            id: v.id,
+            id: v.id, // Keep original ID for updates
             name: v.name,
             sku: v.sku,
             price: v.price,
             is_active: v.is_active,
-            stock: {
-                current_stock: v.stock?.current_stock || 0,
-                reserved_stock: v.stock?.reserved_stock || 0,
-                low_stock_threshold: v.stock?.low_stock_threshold || 5,
-            },
-        })) || [{ id: "1", name: "", sku: "", price: 0, is_active: true, stock: { current_stock: 0, reserved_stock: 0, low_stock_threshold: 5 } }]
+            current_stock: v.stock?.current_stock || 0,
+            reserved_stock: v.stock?.reserved_stock || 0,
+            low_stock_threshold: v.stock?.low_stock_threshold || 5,
+        })) || [{
+            id: `new-${Date.now()}`,
+            name: "",
+            sku: "",
+            price: 0,
+            is_active: true,
+            current_stock: 0,
+            reserved_stock: 0,
+            low_stock_threshold: 5
+        }]
     )
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,41 +85,50 @@ function EditProductForm({ productId }: { productId: string }) {
     }
 
     const addVariant = () => {
-        setVariants([...variants, {
-            id: `${Date.now()}`,
-            name: "",
-            sku: "",
-            price: 0,
-            is_active: true,
-            stock: {
+        setVariants([
+            ...variants,
+            {
+                id: `new-${Date.now()}`,
+                sku: "",
+                name: "",
+                price: 0,
+                is_active: true,
                 current_stock: 0,
                 reserved_stock: 0,
-                low_stock_threshold: 5
+                low_stock_threshold: 5,
             }
-        }])
+        ])
     }
 
     const removeVariant = (id: string) => {
         if (variants.length > 1) {
-            setVariants(variants.filter((v: any) => v.id !== id))
+            setVariants(variants.filter((v) => v.id !== id))
         }
     }
 
-    const updateVariant = (id: string, field: string, value: any) => {
-        setVariants(variants.map((v: any) => {
-            if (v.id !== id) return v
-            // Handle nested stock fields
-            if (field.startsWith('stock.')) {
-                const stockField = field.replace('stock.', '')
-                return { ...v, stock: { ...v.stock, [stockField]: value } }
-            }
-            return { ...v, [field]: value }
-        }))
+    const updateVariant = (id: string, field: keyof VariantFormData, value: any) => {
+        setVariants(variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)))
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
+
+        // Transform variants to match backend structure
+        const transformedVariants: ProductVariant[] = variants.map((v) => ({
+            sku: v.sku,
+            name: v.name,
+            price: v.price,
+            is_active: v.is_active,
+            stock: {
+                current_stock: v.current_stock,
+                reserved_stock: v.reserved_stock,
+                low_stock_threshold: v.low_stock_threshold,
+            },
+        }))
+
+        // Verify payload structure (console log for debugging if needed)
+        // console.log("Submitting:", { ...formData, variants: transformedVariants })
 
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -249,7 +277,7 @@ function EditProductForm({ productId }: { productId: string }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle>Product Variants</CardTitle>
-                                <CardDescription>Add different variants of your product</CardDescription>
+                                <CardDescription>Manage variants and stock levels</CardDescription>
                             </div>
                             <Button type="button" variant="outline" size="sm" onClick={addVariant}>
                                 <Plus className="h-4 w-4 mr-2" />
@@ -258,15 +286,40 @@ function EditProductForm({ productId }: { productId: string }) {
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {variants.map((variant: any) => (
-                            <div key={variant.id} className="flex gap-4 items-start p-4 rounded-lg border">
-                                <div className="flex-1 grid grid-cols-4 gap-4">
+                        {variants.map((variant) => (
+                            <div key={variant.id} className="p-4 rounded-lg border space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-medium">Variant Details</h4>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Label htmlFor={`active-${variant.id}`} className="text-sm">Active</Label>
+                                            <Switch
+                                                id={`active-${variant.id}`}
+                                                checked={variant.is_active}
+                                                onCheckedChange={(checked) => updateVariant(variant.id, "is_active", checked)}
+                                            />
+                                        </div>
+                                        {variants.length > 1 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeVariant(variant.id)}
+                                                className="text-destructive"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <Label>Variant Name</Label>
                                         <Input
                                             value={variant.name}
                                             onChange={(e) => updateVariant(variant.id, "name", e.target.value)}
-                                            placeholder="e.g., Standard"
+                                            placeholder="e.g., Red / Large"
                                             required
                                         />
                                     </div>
@@ -275,7 +328,7 @@ function EditProductForm({ productId }: { productId: string }) {
                                         <Input
                                             value={variant.sku}
                                             onChange={(e) => updateVariant(variant.id, "sku", e.target.value)}
-                                            placeholder="e.g., KB-001-STD"
+                                            placeholder="e.g., GHPX-RED-L"
                                             required
                                         />
                                     </div>
@@ -284,31 +337,42 @@ function EditProductForm({ productId }: { productId: string }) {
                                         <Input
                                             type="number"
                                             value={variant.price}
-                                            onChange={(e) => updateVariant(variant.id, "price", Number.parseInt(e.target.value) || 0)}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Stock</Label>
-                                        <Input
-                                            type="number"
-                                            value={variant.stock?.current_stock || 0}
-                                            onChange={(e) => updateVariant(variant.id, "stock.current_stock", Number.parseInt(e.target.value) || 0)}
+                                            onChange={(e) => updateVariant(variant.id, "price", parseFloat(e.target.value) || 0)}
                                             required
                                         />
                                     </div>
                                 </div>
-                                {variants.length > 1 && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeVariant(variant.id)}
-                                        className="text-destructive"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                )}
+
+                                <div className="border-t pt-4">
+                                    <h5 className="text-sm font-medium mb-3">Stock Information</h5>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Current Stock</Label>
+                                            <Input
+                                                type="number"
+                                                value={variant.current_stock}
+                                                onChange={(e) => updateVariant(variant.id, "current_stock", parseInt(e.target.value) || 0)}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Reserved Stock</Label>
+                                            <Input
+                                                type="number"
+                                                value={variant.reserved_stock}
+                                                onChange={(e) => updateVariant(variant.id, "reserved_stock", parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Low Stock Threshold</Label>
+                                            <Input
+                                                type="number"
+                                                value={variant.low_stock_threshold}
+                                                onChange={(e) => updateVariant(variant.id, "low_stock_threshold", parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </CardContent>
