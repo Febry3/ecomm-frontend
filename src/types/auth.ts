@@ -1,5 +1,6 @@
 export interface User {
     user_id: number;
+    seller_id?: number;
     username: string;
     email: string;
     profile_url?: string;
@@ -16,4 +17,5 @@ export interface GoogleLoginResponse {
     username?: string;
     profile_url?: string;
     role: string;
+    seller_id?: number;
 }

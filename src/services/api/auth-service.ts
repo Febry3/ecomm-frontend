@@ -89,9 +89,11 @@ export function useGoogleLoginOrRegister() {
                 user_id: data.id,
                 profile_url: data.profile_url,
                 role: data.role,
+                seller_id: data.seller_id!
             });
             setToken(data.access_token);
             toast.success("Auth Success");
+            console.log(data.seller_id)
             window.location.href = "/";
         },
         onError: (error) => {

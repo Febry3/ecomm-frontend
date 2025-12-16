@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Spinner } from "../ui/spinner";
+import Loader from "../loader";
 
 export default function SellerGuard({ children }: { children: React.ReactNode }) {
     const { user, isAuthenticated } = useAuthStore();
@@ -20,17 +21,14 @@ export default function SellerGuard({ children }: { children: React.ReactNode })
         if (!isAuthenticated) {
             router.push("/login");
         } else if (user?.role !== "seller") {
-            router.push("/");
+            router.push("/seller/onboard");
         } else {
             setIsChecking(false);
         }
     }, [isAuthenticated, user, router, pathname]);
 
     if (isChecking) {
-        return <div className="flex items-center justify-center h-screen gap-3">
-            <Spinner className="h-15 w-15 text-primary" />
-            <h1 className="text-2xl font-bold">Please wait...</h1>
-        </div>
+        return <Loader />
     }
 
     return <>{children}</>;

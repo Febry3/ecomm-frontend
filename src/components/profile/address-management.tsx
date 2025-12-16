@@ -9,41 +9,67 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { LocationPicker } from "@/components/map/location-picker"
 import { toast } from "sonner"
 import { Address } from "@/types/address"
-import { useAddUserAddress, useGetAllUserAddress } from "@/services/api/address-service"
+import { useAddUserAddress, useGetAllUserAddress, useUpdateUserAddress } from "@/services/api/address-service" // Assuming useUpdateUserAddress exists or will be used
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+
+const addressSchema = z.object({
+    address_label: z.string().min(1, "Address label is required"),
+    receiver_name: z.string().min(1, "Receiver name is required"),
+    street_address: z.string().min(5, "Street address must be at least 5 characters"),
+    rt: z.string().optional(),
+    rw: z.string().optional(),
+    village: z.string().min(1, "Village is required"),
+    district: z.string().min(1, "District is required"),
+    city: z.string().min(1, "City is required"),
+    province: z.string().min(1, "Province is required"),
+    postal_code: z.string().regex(/^\d{5}$/, "Postal code must be 5 digits"),
+    notes: z.string().optional(),
+    is_default: z.boolean(),
+})
+
+type AddressFormValues = z.infer<typeof addressSchema>
 
 export function AddressManagement() {
     const { data: userAddressData } = useGetAllUserAddress()
-    const [addresses, setAddresses] = useState<Address[]>([]);
-    const { mutate: addUserAddress } = useAddUserAddress();
+    const [addresses, setAddresses] = useState<Address[]>([])
+    const { mutate: addUserAddress } = useAddUserAddress()
+    // Assuming update mutation exists, if not I'll use the logic from before but cleaner
+    // const { mutate: updateUserAddress } = useUpdateUserAddress() 
 
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingAddress, setEditingAddress] = useState<Address | null>(null)
-    const [formData, setFormData] = useState<Omit<Address, "address_id" | "user_id" | "created_at" | "updated_at">>({
-        address_label: "",
-        receiver_name: "",
-        street_address: "",
-        rt: "",
-        rw: "",
-        village: "",
-        district: "",
-        city: "",
-        province: "",
-        postal_code: "",
-        notes: "",
-        is_default: false,
-    })
     const [showMapPicker, setShowMapPicker] = useState(false)
 
+    const form = useForm<AddressFormValues>({
+        resolver: zodResolver(addressSchema),
+        defaultValues: {
+            address_label: "",
+            receiver_name: "",
+            street_address: "",
+            rt: "",
+            rw: "",
+            village: "",
+            district: "",
+            city: "",
+            province: "",
+            postal_code: "",
+            notes: "",
+            is_default: false,
+        },
+    })
+
+    const { register, handleSubmit, setValue, reset, formState: { errors } } = form
+
     const handleLocationSelect = (addressData: any) => {
-        setFormData({
-            ...formData,
-            street_address: addressData.streetAddress || "",
-            village: addressData.village || "",
-            district: addressData.district || "",
-            city: addressData.city || "",
-            province: addressData.province || "",
-            postal_code: addressData.postalCode || "",
-        })
+        setValue("street_address", addressData.streetAddress || "", { shouldValidate: true })
+        setValue("village", addressData.village || "", { shouldValidate: true })
+        setValue("district", addressData.district || "", { shouldValidate: true })
+        setValue("city", addressData.city || "", { shouldValidate: true })
+        setValue("province", addressData.province || "", { shouldValidate: true })
+        setValue("postal_code", addressData.postalCode || "", { shouldValidate: true })
+
         setShowMapPicker(false)
         toast.success("Address details have been filled from the map.")
     }
@@ -51,7 +77,7 @@ export function AddressManagement() {
     const handleAddAddress = () => {
         setEditingAddress(null)
         setShowMapPicker(false)
-        setFormData({
+        reset({
             address_label: "",
             receiver_name: "",
             street_address: "",
@@ -70,18 +96,31 @@ export function AddressManagement() {
 
     const handleEditAddress = (address: Address) => {
         setEditingAddress(address)
-        const { address_id, user_id, created_at, updated_at, ...rest } = address
-        setFormData(rest)
         setShowMapPicker(false)
+        reset({
+            address_label: address.address_label,
+            receiver_name: address.receiver_name,
+            street_address: address.street_address,
+            rt: address.rt || "",
+            rw: address.rw || "",
+            village: address.village,
+            district: address.district,
+            city: address.city,
+            province: address.province,
+            postal_code: address.postal_code,
+            notes: address.notes || "",
+            is_default: address.is_default,
+        })
         setIsDialogOpen(true)
     }
 
-    const handleSaveAddress = () => {
+    const onSubmit = (data: AddressFormValues) => {
         if (editingAddress) {
-            setAddresses(addresses.map((addr) => (addr.address_id === editingAddress.address_id ? { ...addr, ...formData } : addr)))
+            const updatedAddress = { ...editingAddress, ...data }
+            setAddresses(addresses.map((addr) => (addr.address_id === editingAddress.address_id ? updatedAddress : addr)))
             toast.success("Your address has been updated successfully.")
         } else {
-            addUserAddress(formData);
+            addUserAddress(data as any)
             toast.success("New address has been added successfully.")
         }
         setIsDialogOpen(false)
@@ -94,9 +133,9 @@ export function AddressManagement() {
 
     useEffect(() => {
         if (userAddressData) {
-            setAddresses(userAddressData);
+            setAddresses(userAddressData)
         }
-    }, [userAddressData]);
+    }, [userAddressData])
 
     return (
         <div className="bg-card border border-border rounded-lg p-6">
@@ -119,9 +158,10 @@ export function AddressManagement() {
                         {showMapPicker ? (
                             <LocationPicker onCancel={() => setShowMapPicker(false)} onLocationSelect={handleLocationSelect} />
                         ) : (
-                            <div className="space-y-4 py-4">
+                            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
                                 <div className="flex justify-end">
                                     <Button
+                                        type="button"
                                         variant="outline"
                                         size="sm"
                                         className="gap-2 text-primary border-primary/20 hover:bg-primary/5 bg-transparent"
@@ -136,28 +176,34 @@ export function AddressManagement() {
                                     <Label htmlFor="address_label">Address Label</Label>
                                     <Input
                                         id="address_label"
-                                        value={formData.address_label}
-                                        onChange={(e) => setFormData({ ...formData, address_label: e.target.value })}
                                         placeholder="e.g., Home, Office"
+                                        {...register("address_label")}
                                     />
+                                    {errors.address_label && (
+                                        <p className="text-xs text-destructive">{errors.address_label.message}</p>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="receiver_name">Receiver Name</Label>
                                     <Input
                                         id="receiver_name"
-                                        value={formData.receiver_name}
-                                        onChange={(e) => setFormData({ ...formData, receiver_name: e.target.value })}
                                         placeholder="Enter receiver name"
+                                        {...register("receiver_name")}
                                     />
+                                    {errors.receiver_name && (
+                                        <p className="text-xs text-destructive">{errors.receiver_name.message}</p>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="street_address">Street Address</Label>
                                     <Input
                                         id="street_address"
-                                        value={formData.street_address}
-                                        onChange={(e) => setFormData({ ...formData, street_address: e.target.value })}
                                         placeholder="Jalan Name, House Number"
+                                        {...register("street_address")}
                                     />
+                                    {errors.street_address && (
+                                        <p className="text-xs text-destructive">{errors.street_address.message}</p>
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -165,18 +211,16 @@ export function AddressManagement() {
                                         <Label htmlFor="rt">RT (Optional)</Label>
                                         <Input
                                             id="rt"
-                                            value={formData.rt}
-                                            onChange={(e) => setFormData({ ...formData, rt: e.target.value })}
                                             placeholder="000"
+                                            {...register("rt")}
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="rw">RW (Optional)</Label>
                                         <Input
                                             id="rw"
-                                            value={formData.rw}
-                                            onChange={(e) => setFormData({ ...formData, rw: e.target.value })}
                                             placeholder="000"
+                                            {...register("rw")}
                                         />
                                     </div>
                                 </div>
@@ -186,19 +230,23 @@ export function AddressManagement() {
                                         <Label htmlFor="village">Village (Kelurahan/Desa)</Label>
                                         <Input
                                             id="village"
-                                            value={formData.village}
-                                            onChange={(e) => setFormData({ ...formData, village: e.target.value })}
                                             placeholder="Enter village"
+                                            {...register("village")}
                                         />
+                                        {errors.village && (
+                                            <p className="text-xs text-destructive">{errors.village.message}</p>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="district">District (Kecamatan)</Label>
                                         <Input
                                             id="district"
-                                            value={formData.district}
-                                            onChange={(e) => setFormData({ ...formData, district: e.target.value })}
                                             placeholder="Enter district"
+                                            {...register("district")}
                                         />
+                                        {errors.district && (
+                                            <p className="text-xs text-destructive">{errors.district.message}</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -207,19 +255,23 @@ export function AddressManagement() {
                                         <Label htmlFor="city">City/Regency</Label>
                                         <Input
                                             id="city"
-                                            value={formData.city}
-                                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                                             placeholder="Enter city"
+                                            {...register("city")}
                                         />
+                                        {errors.city && (
+                                            <p className="text-xs text-destructive">{errors.city.message}</p>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="province">Province</Label>
                                         <Input
                                             id="province"
-                                            value={formData.province}
-                                            onChange={(e) => setFormData({ ...formData, province: e.target.value })}
                                             placeholder="Enter province"
+                                            {...register("province")}
                                         />
+                                        {errors.province && (
+                                            <p className="text-xs text-destructive">{errors.province.message}</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -227,19 +279,20 @@ export function AddressManagement() {
                                     <Label htmlFor="postal_code">Postal Code</Label>
                                     <Input
                                         id="postal_code"
-                                        value={formData.postal_code}
-                                        onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                                         placeholder="Enter postal code"
+                                        {...register("postal_code")}
                                     />
+                                    {errors.postal_code && (
+                                        <p className="text-xs text-destructive">{errors.postal_code.message}</p>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label htmlFor="notes">Notes (Patokan)</Label>
                                     <Input
                                         id="notes"
-                                        value={formData.notes}
-                                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                         placeholder="e.g., White fence, near Indomaret"
+                                        {...register("notes")}
                                     />
                                 </div>
 
@@ -247,21 +300,20 @@ export function AddressManagement() {
                                     <input
                                         type="checkbox"
                                         id="is_default"
-                                        checked={formData.is_default}
-                                        onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
                                         className="w-4 h-4"
+                                        {...register("is_default")}
                                     />
                                     <Label htmlFor="is_default" className="cursor-pointer">
                                         Set as default address
                                     </Label>
                                 </div>
                                 <div className="flex justify-end gap-2 pt-4">
-                                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                                         Cancel
                                     </Button>
-                                    <Button onClick={handleSaveAddress}>Save Address</Button>
+                                    <Button type="submit">Save Address</Button>
                                 </div>
-                            </div>
+                            </form>
                         )}
                     </DialogContent>
                 </Dialog>
