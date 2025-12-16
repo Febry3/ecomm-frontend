@@ -10,10 +10,16 @@ import { Label } from "@/components/ui/label"
 import { TiptapEditor } from "@/components/tiptap-editor"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Trash2, Upload, X, Loader2 } from "lucide-react"
-import { toast } from "sonner"
 import { useGetSellerProduct, useUpdateProduct } from "@/services/api/product-service"
 import { ProductVariant } from "@/types/product"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useGetAllCategory } from "@/services/api/category-service"
+
+interface Category {
+    id: string;
+    name: string;
+    slug: string;
+}
 
 interface VariantFormData {
     id: string
@@ -26,27 +32,42 @@ interface VariantFormData {
     low_stock_threshold: number
 }
 
+interface ImageFormData {
+    id: string
+    url: string
+    file?: File
+    isPrimary: boolean
+    isExisting: boolean // Track if this is an existing image from the server
+}
+
 function EditProductForm({ productId }: { productId: string }) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const { data: product } = useGetSellerProduct(productId)
+    const { data: categories } = useGetAllCategory()
 
     const [formData, setFormData] = useState({
         title: product?.title || "",
         slug: product?.slug || "",
         description: product?.description || "",
         badge: product?.badge || "",
-        category_id: product?.category_id || "",
+        category_id: product?.category_id || 0,
         is_active: product?.is_active ?? true,
     })
 
-    const [images, setImages] = useState<Array<{ id: string; url: string; file?: File; isPrimary: boolean }>>(
-        product?.images || [],
+    // Map product_images from API response to our image state format
+    const [images, setImages] = useState<ImageFormData[]>(
+        product?.product_images?.map((img: any) => ({
+            id: img.id,
+            url: img.image_url,
+            isPrimary: img.is_primary,
+            isExisting: true,
+        })) || []
     )
 
     const [variants, setVariants] = useState<VariantFormData[]>(
         product?.variants?.map((v: any) => ({
-            id: v.id, // Keep original ID for updates
+            id: v.id,
             name: v.name,
             sku: v.sku,
             price: v.price,
@@ -74,6 +95,7 @@ function EditProductForm({ productId }: { productId: string }) {
                 url: URL.createObjectURL(file),
                 file,
                 isPrimary: images.length === 0 && index === 0,
+                isExisting: false,
             }))
             setImages([...images, ...newImages])
         }
@@ -141,15 +163,33 @@ function EditProductForm({ productId }: { productId: string }) {
             return variantPayload
         })
 
+        // Extract new image files (ones with file property)
+        const newImageFiles = images
+            .filter(img => img.file)
+            .map(img => img.file as File)
+
+        // Get IDs of existing images to keep
+        const existingImageIds = images
+            .filter(img => img.isExisting)
+            .map(img => img.id)
+
+        // Find primary image index (considering both existing and new images)
+        const primaryIndex = images.findIndex(img => img.isPrimary)
+
         updateProduct(
             {
-                title: formData.title,
-                slug: formData.slug,
-                description: formData.description,
-                badge: formData.badge,
-                category_id: formData.category_id,
-                is_active: formData.is_active,
-                variants: transformedVariants,
+                data: {
+                    title: formData.title,
+                    slug: formData.slug,
+                    description: formData.description,
+                    badge: formData.badge,
+                    category_id: formData.category_id,
+                    is_active: formData.is_active,
+                    variants: transformedVariants,
+                },
+                newImages: newImageFiles,
+                existingImageIds: existingImageIds,
+                primaryImageIndex: primaryIndex >= 0 ? primaryIndex : 0,
             },
             {
                 onSuccess: () => {
@@ -228,16 +268,18 @@ function EditProductForm({ productId }: { productId: string }) {
                             <div className="space-y-2">
                                 <Label htmlFor="category">Category</Label>
                                 <Select
-                                    value={formData.category_id}
-                                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                                    value={formData.category_id.toString()}
+                                    onValueChange={(value) => setFormData({ ...formData, category_id: Number(value) })}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="cat-1">Keyboards</SelectItem>
-                                        <SelectItem value="cat-2">Mice</SelectItem>
-                                        <SelectItem value="cat-3">Headsets</SelectItem>
+                                        {categories?.map((category: Category) => (
+                                            <SelectItem key={category.id} value={String(category.id)}>
+                                                {category.name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -270,7 +312,7 @@ function EditProductForm({ productId }: { productId: string }) {
                 <Card>
                     <CardHeader>
                         <CardTitle>Product Images</CardTitle>
-                        <CardDescription>Upload images for your product</CardDescription>
+                        <CardDescription>Manage images for your product</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-4 gap-4">
@@ -298,6 +340,11 @@ function EditProductForm({ productId }: { productId: string }) {
                                     {image.isPrimary && (
                                         <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
                                             Primary
+                                        </div>
+                                    )}
+                                    {image.isExisting && (
+                                        <div className="absolute top-2 right-2 bg-muted text-muted-foreground text-xs px-2 py-1 rounded">
+                                            Saved
                                         </div>
                                     )}
                                 </div>
@@ -374,9 +421,10 @@ function EditProductForm({ productId }: { productId: string }) {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Price (Rp)</Label>
+                                        <Label>Price</Label>
                                         <Input
                                             type="number"
+                                            step="0.01"
                                             value={variant.price}
                                             onChange={(e) => updateVariant(variant.id, "price", parseFloat(e.target.value) || 0)}
                                             required
@@ -449,4 +497,3 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         </Suspense>
     )
 }
-

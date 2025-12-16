@@ -2,6 +2,7 @@ import apiClient from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useLogout } from "./auth-service";
 
 export interface SellerRequest {
     store_name: string;
@@ -25,6 +26,7 @@ export function useGetSeller() {
 
 export function useRegisterSeller() {
     const { setUser, user } = useAuthStore();
+    const { mutate: logout } = useLogout();
     return useMutation({
         mutationFn: async (data: FormData) => {
             const response = await apiClient.post("/seller", data, {
@@ -42,7 +44,7 @@ export function useRegisterSeller() {
                 role: "seller",
                 seller_id: data.id
             });
-            // window.location.href = "/seller";
+            logout();
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || "Failed to register seller");

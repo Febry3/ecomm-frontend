@@ -46,7 +46,7 @@ export type ProductRequest = {
     slug: string
     description: string
     badge?: string
-    category_id?: string
+    category_id?: number
     is_active: boolean
     variants?: ProductVariant[]
 }
