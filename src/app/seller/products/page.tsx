@@ -11,25 +11,15 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Search, MoreVertical, Edit, Trash2, Loader2 } from "lucide-react"
 import { DeleteProductDialog } from "@/components/seller/delete-product-dialog"
 import { useGetSellerProducts } from "@/services/api/product-service"
-
-interface Product {
-    id: string
-    title: string
-    slug: string
-    description: string
-    category_id: string
-    category?: { name: string }
-    status: "approved" | "pending" | "rejected"
-    is_active: boolean
-    badge?: string
-}
+import { Product } from "@/types/product"
 
 function ProductTable({ searchQuery, onEdit, onDelete }: {
     searchQuery: string
     onEdit: (product: Product) => void
     onDelete: (product: Product) => void
 }) {
-    const { data: products } = useGetSellerProducts() as { data: Product[] }
+    const { data } = useGetSellerProducts()
+    const products = data.products
 
     const filteredProducts = products?.filter((product) =>
         product.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -56,7 +46,7 @@ function ProductTable({ searchQuery, onEdit, onDelete }: {
                     filteredProducts.map((product) => (
                         <TableRow key={product.id}>
                             <TableCell className="font-medium">{product.title}</TableCell>
-                            <TableCell>{product.category?.name || "-"}</TableCell>
+                            <TableCell>{product.category_id || "-"}</TableCell>
                             <TableCell>
                                 <Badge
                                     variant={

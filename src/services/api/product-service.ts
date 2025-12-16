@@ -1,5 +1,5 @@
 import apiClient from "@/lib/api-client";
-import { ProductRequest } from "@/types/product";
+import { ProductRequest, SellerProductsResponse } from "@/types/product";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -44,8 +44,8 @@ export function useGetSellerProducts() {
     return useSuspenseQuery({
         queryKey: ["seller-products"],
         queryFn: async () => {
-            const response = await apiClient.get("/seller/products");
-            console.log(response.data);
+            const response = await apiClient.get<{ data: SellerProductsResponse }>("/seller/products");
+            // API returns { data: SellerProductsResponse, ... }
             return response.data.data;
         },
         retry: 1,
