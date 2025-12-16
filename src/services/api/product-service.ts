@@ -1,36 +1,14 @@
 import apiClient from "@/lib/api-client";
+import { ProductRequest } from "@/types/product";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-export interface ProductVariantStock {
-    current_stock: number;
-    reserved_stock: number;
-    low_stock_threshold: number;
-}
-
-export interface ProductVariant {
-    sku: string;
-    name: string;
-    price: number;
-    is_active: boolean;
-    stock: ProductVariantStock;
-}
-
-export interface CreateProductRequest {
-    title: string;
-    slug: string;
-    description: string;
-    category_id: string;
-    badge?: string;
-    is_active: boolean;
-    variants: ProductVariant[];
-}
 
 export function useCreateProduct() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (data: CreateProductRequest) => {
+        mutationFn: async (data: ProductRequest) => {
             const response = await apiClient.post("/seller/products", data);
             return response.data.data;
         },
@@ -40,6 +18,24 @@ export function useCreateProduct() {
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || "Failed to create product");
+        },
+    });
+}
+
+export function useUpdateProduct(id: string) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (data: ProductRequest) => {
+            const response = await apiClient.put(`/seller/products/${id}`, data);
+            return response.data.data;
+        },
+        onSuccess: () => {
+            toast.success("Product updated successfully");
+            queryClient.invalidateQueries({ queryKey: ["seller-product"] });
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || "Failed to update product");
         },
     });
 }

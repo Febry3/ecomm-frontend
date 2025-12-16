@@ -12,7 +12,8 @@ import { TiptapEditor } from "@/components/tiptap-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Trash2, Upload, X } from "lucide-react"
-import { useCreateProduct, type ProductVariant } from "@/services/api/product-service"
+import { useCreateProduct } from "@/services/api/product-service"
+import { ProductVariant } from "@/types/product"
 
 interface VariantFormData {
     id: string;

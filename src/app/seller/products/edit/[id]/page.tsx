@@ -11,7 +11,9 @@ import { TiptapEditor } from "@/components/tiptap-editor"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Trash2, Upload, X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useGetSellerProduct, type ProductVariant } from "@/services/api/product-service"
+import { useGetSellerProduct, useUpdateProduct } from "@/services/api/product-service"
+import { ProductVariant } from "@/types/product"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface VariantFormData {
     id: string
@@ -34,6 +36,7 @@ function EditProductForm({ productId }: { productId: string }) {
         slug: product?.slug || "",
         description: product?.description || "",
         badge: product?.badge || "",
+        category_id: product?.category_id || "",
         is_active: product?.is_active ?? true,
     })
 
@@ -110,33 +113,54 @@ function EditProductForm({ productId }: { productId: string }) {
         setVariants(variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)))
     }
 
+    const { mutate: updateProduct } = useUpdateProduct(productId)
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
 
         // Transform variants to match backend structure
-        const transformedVariants: ProductVariant[] = variants.map((v) => ({
-            sku: v.sku,
-            name: v.name,
-            price: v.price,
-            is_active: v.is_active,
-            stock: {
-                current_stock: v.current_stock,
-                reserved_stock: v.reserved_stock,
-                low_stock_threshold: v.low_stock_threshold,
+        const transformedVariants: ProductVariant[] = variants.map((v) => {
+            const variantPayload: ProductVariant = {
+                sku: v.sku,
+                name: v.name,
+                price: v.price,
+                is_active: v.is_active,
+                stock: {
+                    current_stock: v.current_stock,
+                    reserved_stock: v.reserved_stock,
+                    low_stock_threshold: v.low_stock_threshold,
+                },
+            }
+
+            // Only include ID if it's not a new temporary one
+            if (!v.id.startsWith("new-")) {
+                variantPayload.id = v.id
+            }
+
+            return variantPayload
+        })
+
+        updateProduct(
+            {
+                title: formData.title,
+                slug: formData.slug,
+                description: formData.description,
+                badge: formData.badge,
+                category_id: formData.category_id,
+                is_active: formData.is_active,
+                variants: transformedVariants,
             },
-        }))
-
-        // Verify payload structure (console log for debugging if needed)
-        // console.log("Submitting:", { ...formData, variants: transformedVariants })
-
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-
-        toast("Product updated successfully")
-
-        setLoading(false)
-        router.push("/seller/products")
+            {
+                onSuccess: () => {
+                    setLoading(false)
+                    router.push("/seller/products")
+                },
+                onError: () => {
+                    setLoading(false)
+                }
+            }
+        )
     }
 
     if (!product) {
@@ -201,6 +225,23 @@ function EditProductForm({ productId }: { productId: string }) {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="category">Category</Label>
+                                <Select
+                                    value={formData.category_id}
+                                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="cat-1">Keyboards</SelectItem>
+                                        <SelectItem value="cat-2">Mice</SelectItem>
+                                        <SelectItem value="cat-3">Headsets</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
                             <div className="space-y-2">
                                 <Label htmlFor="badge">Badge (Optional)</Label>
                                 <Input
