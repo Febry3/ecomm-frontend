@@ -18,13 +18,11 @@ import {
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useGetSellerProducts } from "@/services/api/product-service"
-import { ProductVariant } from "@/types/product"
 
 export default function VariantsPage() {
     const { data } = useGetSellerProducts()
     const products = data.products
 
-    // Flatten variants from all products
     const allVariants = products.flatMap(product =>
         (product.variants || []).map(variant => ({
             ...variant,
@@ -40,7 +38,6 @@ export default function VariantsPage() {
     const [formData, setFormData] = useState({ sku: "", price: "", stock: "" })
     const [isLoading, setIsLoading] = useState(false)
 
-    // Use stats from API response directly
     const totalVariants = data.count_variant
     const totalStock = data.total_stock
     const stockAlerts = data.total_stock_alert
@@ -54,7 +51,7 @@ export default function VariantsPage() {
 
         const matchesFilter =
             filterProduct === "all" ||
-            (filterProduct === variant.product_id) // Using product_id for filtering is more robust than name checking
+            (filterProduct === variant.product_id)
 
         return matchesSearch && matchesFilter
     })
@@ -72,7 +69,6 @@ export default function VariantsPage() {
     const handleUpdate = async () => {
         if (!editingVariant) return
 
-        // Validation
         if (!formData.sku.trim()) {
             toast("SKU is required")
             return
@@ -92,8 +88,6 @@ export default function VariantsPage() {
 
         setIsLoading(true)
 
-        // TODO: Implement update variant API call
-        // For now, just simulate
         await new Promise((resolve) => setTimeout(resolve, 1000))
 
         toast(`Variant "${editingVariant.name}" has been updated successfully`)
@@ -187,7 +181,7 @@ export default function VariantsPage() {
                             <div>
                                 <p className="text-xs text-muted-foreground sm:text-sm">Inventory Value</p>
                                 <p className="text-xl font-bold sm:text-2xl">
-                                    {totalValue >= 1000000 ? `Rp ${(totalValue / 1000000).toFixed(1)}M` : formatCurrency(totalValue)}
+                                    {totalValue >= 1000000 ? `Rp ${(totalValue / 1000000).toFixed(1)}Jt` : formatCurrency(totalValue)}
                                 </p>
                             </div>
                         </div>

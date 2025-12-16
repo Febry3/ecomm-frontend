@@ -12,8 +12,15 @@ import { TiptapEditor } from "@/components/tiptap-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Trash2, Upload, X } from "lucide-react"
-import { useCreateProduct } from "@/services/api/product-service"
+import { useCreateProductWithImages } from "@/services/api/product-service"
 import { ProductVariant } from "@/types/product"
+import { useGetAllCategory } from "@/services/api/category-service"
+
+interface Category {
+    id: string;
+    name: string;
+    slug: string;
+}
 
 interface VariantFormData {
     id: string;
@@ -28,15 +35,16 @@ interface VariantFormData {
 
 export default function AddProductPage() {
     const router = useRouter()
-    const { mutate: createProduct, isPending } = useCreateProduct()
+    const { mutate: createProductWithImages, isPending } = useCreateProductWithImages()
+    const { data: categories } = useGetAllCategory()
 
     const [formData, setFormData] = useState({
         title: "",
         slug: "",
         description: "",
-        categoryId: "",
+        category_id: 0,
         badge: "",
-        isActive: true,
+        is_active: true,
     })
 
     const [images, setImages] = useState<Array<{ id: string; url: string; file?: File; isPrimary: boolean }>>([])
@@ -116,14 +124,26 @@ export default function AddProductPage() {
             },
         }))
 
-        createProduct({
-            title: formData.title,
-            slug: formData.slug,
-            description: formData.description,
-            category_id: formData.categoryId,
-            badge: formData.badge || undefined,
-            is_active: formData.isActive,
-            variants: transformedVariants,
+        // Extract image files from state
+        const imageFiles = images
+            .filter(img => img.file)
+            .map(img => img.file as File)
+
+        // Find primary image index among the files being uploaded
+        const primaryIndex = images.findIndex(img => img.isPrimary && img.file)
+
+        createProductWithImages({
+            data: {
+                title: formData.title,
+                slug: formData.slug,
+                description: formData.description,
+                category_id: formData.category_id,
+                badge: formData.badge || undefined,
+                is_active: formData.is_active,
+                variants: transformedVariants,
+            },
+            images: imageFiles,
+            primaryImageIndex: primaryIndex >= 0 ? primaryIndex : 0,
         }, {
             onSuccess: () => {
                 router.push("/seller/products")
@@ -188,16 +208,18 @@ export default function AddProductPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="category">Category</Label>
                                 <Select
-                                    value={formData.categoryId}
-                                    onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                                    value={formData.category_id.toString()}
+                                    onValueChange={(value) => setFormData({ ...formData, category_id: Number(value) })}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="cat-1">Keyboards</SelectItem>
-                                        <SelectItem value="cat-2">Mice</SelectItem>
-                                        <SelectItem value="cat-3">Headsets</SelectItem>
+                                        {categories?.map((category: Category) => (
+                                            <SelectItem key={category.id} value={String(category.id)}>
+                                                {category.name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -219,8 +241,8 @@ export default function AddProductPage() {
                                 <p className="text-sm text-muted-foreground">Make this product visible in your store</p>
                             </div>
                             <Switch
-                                checked={formData.isActive}
-                                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                                checked={formData.is_active}
+                                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                             />
                         </div>
                     </CardContent>
