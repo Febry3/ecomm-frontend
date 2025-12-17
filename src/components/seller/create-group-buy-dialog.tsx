@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useCreateGroupBuySession } from "@/services/api/group-buy-service"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
@@ -39,8 +40,8 @@ interface CreateGroupBuyDialogProps {
 }
 
 export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }: CreateGroupBuyDialogProps) {
-    const [isLoading, setIsLoading] = useState(false)
     const [step, setStep] = useState(1)
+    const { mutate: createGroupBuy, isPending: isLoading } = useCreateGroupBuySession()
 
     // Form state based on database schema
     const [selectedProductId, setSelectedProductId] = useState("")
@@ -72,46 +73,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }
         return calculateDiscountedPrice(maxParticipants) * maxParticipants
     }
 
-    const handleCreate = async () => {
-        if (!selectedVariantId || discountTiers.length === 0 || !maxParticipants || !maxQuantity) {
-            toast.error("Missing fields", {
-                description: "Please fill in all required fields.",
-            })
-            return
-        }
-
-        setIsLoading(true)
-
-        // Construct payload matching backend GroupBuySession and GroupBuyTier
-        const payload = {
-            session_code: `GB-${Date.now()}`, // Mock generation
-            product_variant_id: selectedVariantId,
-            seller_id: 1, // Mock ID
-            min_participants: Math.min(...discountTiers.map(t => t.minParticipants)),
-            max_participants: maxParticipants,
-            max_quantity: maxQuantity,
-            status: "active",
-            expires_at: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString(),
-            tiers: discountTiers.map(tier => ({
-                participant_threshold: tier.minParticipants,
-                discount_percentage: tier.discountPercentage
-            }))
-        }
-
-        console.log("Submitting Group Buy Payload:", payload)
-
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-
-        toast.success("Group Buy Session Created", {
-            description: `Your group buy campaign is now ${autoActivate ? "active" : "scheduled"}.`,
-        })
-
-        setIsLoading(false)
-        onOpenChange(false)
-        onSuccess?.()
-
-        // Reset form
+    const resetForm = () => {
         setStep(1)
         setSelectedProductId("")
         setSelectedVariantId("")
@@ -123,6 +85,36 @@ export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }
         setMaxParticipants(10)
         setMaxQuantity(50)
         setExpiresInDays(7)
+    }
+
+    const handleCreate = async () => {
+        if (!selectedVariantId || discountTiers.length === 0 || !maxParticipants || !maxQuantity) {
+            toast.error("Missing fields", {
+                description: "Please fill in all required fields.",
+            })
+            return
+        }
+
+        // Construct payload matching backend API spec
+        const payload = {
+            product_variant_id: selectedVariantId,
+            min_participants: Math.min(...discountTiers.map(t => t.minParticipants)),
+            max_participants: maxParticipants,
+            max_quantity: maxQuantity,
+            expires_at: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString(),
+            tiers: discountTiers.map(tier => ({
+                participant_threshold: tier.minParticipants,
+                discount_percentage: tier.discountPercentage
+            }))
+        }
+
+        createGroupBuy(payload, {
+            onSuccess: () => {
+                onOpenChange(false)
+                onSuccess?.()
+                resetForm()
+            }
+        })
     }
 
     const addDiscountTier = () => {

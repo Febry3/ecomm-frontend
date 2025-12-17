@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { CreateGroupBuyDialog } from "@/components/seller/create-group-buy-dialog"
+import { useGetGroupBuySessions, GroupBuySession } from "@/services/api/group-buy-service"
+import { useGetSellerProductsQuery } from "@/services/api/product-service"
 import {
     Plus,
     Clock,
@@ -33,113 +35,41 @@ import {
     Sparkles,
     CheckCircle2,
     AlertCircle,
+    Loader2,
 } from "lucide-react"
-
-// Mock data based on database schema
-const sessions = [
-    {
-        id: "GB-001",
-        sessionCode: "LB-KB-2024-001",
-        product: {
-            id: "prod-1",
-            title: "Gaming Keyboard RGB",
-            image: "/gaming-keyboard-rgb.jpg",
-            variantName: "Blue Switch",
-        },
-        organizerId: 1,
-        minParticipants: 5,
-        maxParticipants: 20,
-        currentParticipants: 12,
-        discountPercentage: 20,
-        originalPrice: 467350,
-        expiresAt: "2024-02-15",
-        status: "active" as const,
-        createdAt: "2024-02-01",
-    },
-    {
-        id: "GB-002",
-        sessionCode: "LB-MS-2024-002",
-        product: {
-            id: "prod-2",
-            title: "Wireless Gaming Mouse",
-            image: "/placeholder.svg?height=60&width=60",
-            variantName: "Black",
-        },
-        organizerId: 1,
-        minParticipants: 3,
-        maxParticipants: 10,
-        currentParticipants: 10,
-        discountPercentage: 15,
-        originalPrice: 350000,
-        expiresAt: "2024-02-10",
-        status: "completed" as const,
-        createdAt: "2024-01-25",
-    },
-    {
-        id: "GB-003",
-        sessionCode: "LB-HS-2024-003",
-        product: {
-            id: "prod-3",
-            title: "Gaming Headset 7.1",
-            image: "/placeholder.svg?height=60&width=60",
-            variantName: "RGB Edition",
-        },
-        organizerId: 1,
-        minParticipants: 5,
-        maxParticipants: 15,
-        currentParticipants: 2,
-        discountPercentage: 25,
-        originalPrice: 550000,
-        expiresAt: "2024-02-08",
-        status: "cancelled" as const,
-        createdAt: "2024-01-20",
-    },
-]
-
-// Mock products for creating new sessions
-const mockProducts = [
-    {
-        id: "prod-1",
-        title: "Gaming Keyboard RGB",
-        image: "/gaming-keyboard-rgb.jpg",
-        variants: [
-            { id: "var-1", name: "Blue Switch", price: 467350, stock: 50 },
-            { id: "var-2", name: "Red Switch", price: 467350, stock: 30 },
-            { id: "var-3", name: "Brown Switch", price: 487350, stock: 25 },
-        ],
-    },
-    {
-        id: "prod-2",
-        title: "Wireless Gaming Mouse",
-        image: "/placeholder.svg?height=60&width=60",
-        variants: [
-            { id: "var-4", name: "Black", price: 350000, stock: 100 },
-            { id: "var-5", name: "White", price: 350000, stock: 45 },
-        ],
-    },
-    {
-        id: "prod-3",
-        title: "Gaming Headset 7.1",
-        image: "/placeholder.svg?height=60&width=60",
-        variants: [
-            { id: "var-6", name: "RGB Edition", price: 550000, stock: 20 },
-            { id: "var-7", name: "Standard", price: 450000, stock: 35 },
-        ],
-    },
-]
 
 export default function GroupBuyPage() {
     const [searchQuery, setSearchQuery] = useState("")
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
-    const [selectedSession, setSelectedSession] = useState<(typeof sessions)[0] | null>(null)
+    const [selectedSession, setSelectedSession] = useState<GroupBuySession | null>(null)
+
+    // Fetch real data from API
+    const { data: sessions = [], isLoading, isError } = useGetGroupBuySessions()
+    const { data: productsData } = useGetSellerProductsQuery()
+
+    // Transform products for the create dialog
+    const products = useMemo(() => {
+        if (!productsData?.products) return []
+        return productsData.products.map((product) => ({
+            id: product.id,
+            title: product.title,
+            image: "/placeholder.svg", // No image field in the Product type
+            variants: product.variants?.map((variant) => ({
+                id: variant.id || "",
+                name: variant.name,
+                price: variant.price,
+                stock: variant.stock?.current_stock || 0,
+            })) || [],
+        }))
+    }, [productsData])
 
     const filteredSessions = (status: string) =>
         sessions.filter(
             (s) =>
                 s.status === status &&
-                (s.product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    s.sessionCode.toLowerCase().includes(searchQuery.toLowerCase())),
+                (s.product_variant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    s.session_code.toLowerCase().includes(searchQuery.toLowerCase())),
         )
 
     const copyShareLink = (sessionCode: string) => {
@@ -170,26 +100,35 @@ export default function GroupBuyPage() {
         }
     }
 
-    const SessionCard = ({ session }: { session: (typeof sessions)[0] }) => {
-        const progress = (session.currentParticipants / session.maxParticipants) * 100
-        const minReached = session.currentParticipants >= session.minParticipants
-        const discountedPrice = session.originalPrice * (1 - session.discountPercentage / 100)
+    const SessionCard = ({ session }: { session: GroupBuySession }) => {
+        const currentParticipants = session.current_participants || 0
+        const progress = (currentParticipants / session.max_participants) * 100
+        const minReached = currentParticipants >= session.min_participants
+
+        // Get the highest applicable discount from tiers
+        const getMaxDiscount = () => {
+            if (!session.group_buy_tiers?.length) return 0
+            return Math.max(...session.group_buy_tiers.map(t => t.DiscountPercentage))
+        }
+        const discountPercentage = getMaxDiscount()
+        const originalPrice = session.product_variant?.price || 0
+        const discountedPrice = originalPrice * (1 - discountPercentage / 100)
 
         return (
             <Card className="bg-white/5 border-white/10 hover:border-white/20 transition-colors">
                 <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                         <img
-                            src={session.product.image || "/placeholder.svg"}
-                            alt={session.product.title}
+                            src="/placeholder.svg"
+                            alt={session.product_variant?.name || "Product"}
                             className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
                         />
                         <div className="flex-1 space-y-3">
                             <div className="flex items-start justify-between gap-2">
                                 <div>
-                                    <h3 className="font-semibold text-base">{session.product.title}</h3>
-                                    <p className="text-xs text-muted-foreground">{session.product.variantName}</p>
-                                    <p className="text-xs text-muted-foreground font-mono mt-1">{session.sessionCode}</p>
+                                    <h3 className="font-semibold text-base">{session.product_variant?.name || "Unknown Product"}</h3>
+                                    <p className="text-xs text-muted-foreground">SKU: {session.product_variant?.sku}</p>
+                                    <p className="text-xs text-muted-foreground font-mono mt-1">{session.session_code}</p>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                     {getStatusBadge(session.status)}
@@ -201,7 +140,7 @@ export default function GroupBuyPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => copyShareLink(session.sessionCode)}>
+                                                <DropdownMenuItem onClick={() => copyShareLink(session.session_code)}>
                                                     <Copy className="h-4 w-4 mr-2" />
                                                     Copy Share Link
                                                 </DropdownMenuItem>
@@ -231,33 +170,33 @@ export default function GroupBuyPage() {
                                         Participants
                                     </span>
                                     <span className="font-medium">
-                                        {session.currentParticipants} / {session.maxParticipants}
+                                        {currentParticipants} / {session.max_participants}
                                         {minReached && <CheckCircle2 className="h-4 w-4 inline ml-1 text-green-500" />}
                                     </span>
                                 </div>
                                 <Progress value={progress} className="h-2" />
                                 <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span className={minReached ? "text-green-500" : ""}>Min: {session.minParticipants}</span>
-                                    <span>Max: {session.maxParticipants}</span>
+                                    <span className={minReached ? "text-green-500" : ""}>Min: {session.min_participants}</span>
+                                    <span>Max: {session.max_participants}</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t border-white/10">
                                 <div className="flex items-center gap-4">
                                     <div>
-                                        <p className="text-xs text-muted-foreground">Discount</p>
-                                        <p className="text-sm font-bold text-green-500">{session.discountPercentage}%</p>
+                                        <p className="text-xs text-muted-foreground">Max Discount</p>
+                                        <p className="text-sm font-bold text-green-500">{discountPercentage}%</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-muted-foreground">Final Price</p>
-                                        <p className="text-sm font-bold text-accent">Rp {discountedPrice.toLocaleString("id-ID")}</p>
+                                        <p className="text-xs text-muted-foreground">Original Price</p>
+                                        <p className="text-sm font-bold text-accent">Rp {originalPrice.toLocaleString("id-ID")}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                     <Clock className="h-3.5 w-3.5" />
                                     {session.status === "active" ? (
-                                        <span>Expires {new Date(session.expiresAt).toLocaleDateString("id-ID")}</span>
+                                        <span>Expires {new Date(session.expires_at).toLocaleDateString("id-ID")}</span>
                                     ) : (
-                                        <span>Ended {new Date(session.expiresAt).toLocaleDateString("id-ID")}</span>
+                                        <span>Ended {new Date(session.expires_at).toLocaleDateString("id-ID")}</span>
                                     )}
                                 </div>
                             </div>
@@ -272,7 +211,7 @@ export default function GroupBuyPage() {
     const completedCount = sessions.filter((s) => s.status === "completed").length
     const totalParticipants = sessions
         .filter((s) => s.status !== "cancelled")
-        .reduce((acc, s) => acc + s.currentParticipants, 0)
+        .reduce((acc, s) => acc + (s.current_participants || 0), 0)
 
     return (
         <div className="space-y-6">
@@ -418,7 +357,7 @@ export default function GroupBuyPage() {
             </Tabs>
 
             {/* Create Dialog */}
-            <CreateGroupBuyDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} products={mockProducts} />
+            <CreateGroupBuyDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} products={products} />
 
             {/* Cancel Confirmation Dialog */}
             <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -426,8 +365,8 @@ export default function GroupBuyPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Cancel Group Buy Session?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will cancel the group buy session for "{selectedSession?.product.title}". All{" "}
-                            {selectedSession?.currentParticipants} participants will be notified and refunded. This action cannot be
+                            This will cancel the group buy session for "{selectedSession?.product_variant?.name}". All{" "}
+                            {selectedSession?.current_participants || 0} participants will be notified and refunded. This action cannot be
                             undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

@@ -117,6 +117,18 @@ export function useGetSellerProducts() {
     });
 }
 
+// Non-suspending version for use in pages without Suspense boundary
+export function useGetSellerProductsQuery() {
+    return useQuery({
+        queryKey: ["seller-products"],
+        queryFn: async () => {
+            const response = await apiClient.get<{ data: SellerProductsResponse }>("/seller/products");
+            return response.data.data;
+        },
+        retry: 1,
+    });
+}
+
 export function useGetSellerProduct(id: string) {
     return useSuspenseQuery({
         queryKey: ["seller-product"],
