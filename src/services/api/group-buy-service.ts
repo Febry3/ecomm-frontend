@@ -1,4 +1,5 @@
 import apiClient from "@/lib/api-client";
+import { ChangeGroupBuySessionStatusRequest } from "@/types/group-buy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -117,7 +118,26 @@ export function useCreateGroupBuySession() {
             queryClient.invalidateQueries({ queryKey: ["seller-group-buy-sessions"] });
         },
         onError: (error: any) => {
-            toast.error(error.response?.data?.message || "Failed to create group buy session");
+            toast.error(error.response?.data?.error || "Failed to create group buy session");
+        },
+    });
+}
+
+export function useChangeGroupBuySessionStatus() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: ChangeGroupBuySessionStatusRequest) => {
+            const response = await apiClient.patch("/seller/group-buy/status", data);
+            return response.data.data;
+        },
+        onSuccess: () => {
+            toast.success("Session Cancelled", {
+                description: "The group buy session has been cancelled.",
+            })
+            queryClient.invalidateQueries({ queryKey: ["seller-group-buy-sessions"] });
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.error || "Failed to change group buy session status");
         },
     });
 }
