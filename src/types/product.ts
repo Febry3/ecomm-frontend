@@ -18,6 +18,13 @@ export interface ProductVariant {
     stock: ProductVariantStock
 }
 
+export interface ProductImage {
+    id: string
+    product_id: string
+    image_url: string
+    created_at: string
+}
+
 export interface Product {
     id: string
     seller_id: number
@@ -31,6 +38,7 @@ export interface Product {
     created_at: string
     updated_at: string
     variants: ProductVariant[]
+    product_images?: ProductImage[]
 }
 
 export interface SellerProductsResponse {

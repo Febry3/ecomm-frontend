@@ -1,90 +1,147 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
+import { useCreateGroupBuySession } from "@/services/api/group-buy-service"
+import { useGetSellerProductsQuery } from "@/services/api/product-service"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Users, Percent, Calendar, Package, Info, Sparkles, TrendingUp, Clock, CheckCircle2 } from "lucide-react"
-import Image from "next/image"
 import { toast } from "sonner"
+import Image from "next/image"
+import { Users, Percent, Calendar, Package, Info, Sparkles, TrendingUp, Plus, XCircle } from "lucide-react"
 
-interface Product {
-    id: string
-    title: string
-    image: string
-    variants: {
-        id: string
-        name: string
-        price: number
-        stock: number
-    }[]
+interface DiscountTier {
+    minParticipants: number
+    discountPercentage: number
 }
 
 interface CreateGroupBuyDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    products: Product[]
     onSuccess?: () => void
 }
 
-export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }: CreateGroupBuyDialogProps) {
-    const [isLoading, setIsLoading] = useState(false)
+export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGroupBuyDialogProps) {
     const [step, setStep] = useState(1)
+    const { mutate: createGroupBuy, isPending: isLoading } = useCreateGroupBuySession()
+    const { data: productsData } = useGetSellerProductsQuery()
 
-    // Form state based on database schema
+    // Transform products data for the dialog
+    const products = useMemo(() => {
+        if (!productsData?.products) return []
+        return productsData.products.map((product) => ({
+            id: product.id,
+            title: product.title,
+            image: product.product_images?.[0]?.image_url || "/placeholder.svg",
+            variants: product.variants?.map((variant) => ({
+                id: variant.id || "",
+                name: variant.name,
+                price: variant.price,
+                stock: variant.stock?.current_stock || 0,
+            })) || [],
+        }))
+    }, [productsData])
+
     const [selectedProductId, setSelectedProductId] = useState("")
     const [selectedVariantId, setSelectedVariantId] = useState("")
-    const [minParticipants, setMinParticipants] = useState(3)
+    const [discountTiers, setDiscountTiers] = useState<DiscountTier[]>([
+        { minParticipants: 3, discountPercentage: 5 },
+        { minParticipants: 5, discountPercentage: 10 },
+        { minParticipants: 10, discountPercentage: 15 },
+    ])
     const [maxParticipants, setMaxParticipants] = useState(10)
-    const [discountPercentage, setDiscountPercentage] = useState(15)
+    const [maxQuantity, setMaxQuantity] = useState(50)
     const [expiresInDays, setExpiresInDays] = useState(7)
     const [autoActivate, setAutoActivate] = useState(true)
 
     const selectedProduct = products.find((p) => p.id === selectedProductId)
     const selectedVariant = selectedProduct?.variants.find((v) => v.id === selectedVariantId)
 
-    const calculateDiscountedPrice = () => {
+    const calculateDiscountedPrice = (participants: number = maxParticipants) => {
         if (!selectedVariant) return 0
-        return selectedVariant.price * (1 - discountPercentage / 100)
+        const applicableTier = [...discountTiers]
+            .sort((a, b) => b.minParticipants - a.minParticipants)
+            .find((tier) => participants >= tier.minParticipants)
+        const discount = applicableTier?.discountPercentage || 0
+        return selectedVariant.price * (1 - discount / 100)
     }
 
     const calculatePotentialRevenue = () => {
         if (!selectedVariant) return 0
-        return calculateDiscountedPrice() * maxParticipants
+        return calculateDiscountedPrice(maxParticipants) * maxParticipants
     }
 
-    const handleCreate = async () => {
-        if (!selectedVariantId || !minParticipants || !maxParticipants || !discountPercentage) {
-            toast("Please fill in all required fields.")
-            return
-        }
-
-        setIsLoading(true)
-
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-
-        toast("Group Buy Session Created")
-
-        setIsLoading(false)
-        onOpenChange(false)
-        onSuccess?.()
-
-        // Reset form
+    const resetForm = () => {
         setStep(1)
         setSelectedProductId("")
         setSelectedVariantId("")
-        setMinParticipants(3)
+        setDiscountTiers([
+            { minParticipants: 3, discountPercentage: 5 },
+            { minParticipants: 5, discountPercentage: 10 },
+            { minParticipants: 10, discountPercentage: 15 },
+        ])
         setMaxParticipants(10)
-        setDiscountPercentage(15)
+        setMaxQuantity(50)
         setExpiresInDays(7)
+    }
+
+    const handleCreate = async () => {
+        if (!selectedVariantId || discountTiers.length === 0 || !maxParticipants || !maxQuantity) {
+            toast.error("Missing fields", {
+                description: "Please fill in all required fields.",
+            })
+            return
+        }
+
+        // Construct payload matching backend API spec
+        const payload = {
+            product_variant_id: selectedVariantId,
+            min_participants: Math.min(...discountTiers.map(t => t.minParticipants)),
+            max_participants: maxParticipants,
+            max_quantity: maxQuantity,
+            expires_at: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString(),
+            tiers: discountTiers.map(tier => ({
+                participant_threshold: tier.minParticipants,
+                discount_percentage: tier.discountPercentage
+            }))
+        }
+
+        createGroupBuy(payload, {
+            onSuccess: () => {
+                onOpenChange(false)
+                onSuccess?.()
+                resetForm()
+            }
+        })
+    }
+
+    const addDiscountTier = () => {
+        const lastTier = discountTiers[discountTiers.length - 1]
+        setDiscountTiers([
+            ...discountTiers,
+            {
+                minParticipants: lastTier.minParticipants + 2,
+                discountPercentage: Math.min(lastTier.discountPercentage + 5, 50),
+            },
+        ])
+    }
+
+    const removeDiscountTier = (index: number) => {
+        if (discountTiers.length > 1) {
+            setDiscountTiers(discountTiers.filter((_, i) => i !== index))
+        }
+    }
+
+    const updateDiscountTier = (index: number, field: keyof DiscountTier, value: number) => {
+        const newTiers = [...discountTiers]
+        newTiers[index][field] = value
+        setDiscountTiers(newTiers)
     }
 
     const renderStep1 = () => (
@@ -176,22 +233,6 @@ export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }
         <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="minParticipants">
-                        <Users className="h-4 w-4 inline mr-2" />
-                        Min Participants
-                    </Label>
-                    <Input
-                        id="minParticipants"
-                        type="number"
-                        min={2}
-                        max={maxParticipants - 1}
-                        value={minParticipants}
-                        onChange={(e) => setMinParticipants(Number(e.target.value))}
-                        className="bg-white/5 border-white/10"
-                    />
-                    <p className="text-xs text-muted-foreground">Minimum buyers needed to activate discount</p>
-                </div>
-                <div className="space-y-2">
                     <Label htmlFor="maxParticipants">
                         <Users className="h-4 w-4 inline mr-2" />
                         Max Participants
@@ -199,13 +240,33 @@ export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }
                     <Input
                         id="maxParticipants"
                         type="number"
-                        min={minParticipants + 1}
-                        max={selectedVariant?.stock || 100}
+                        min={Math.max(...discountTiers.map((t) => t.minParticipants)) + 1}
+                        // max={selectedVariant?.stock || 100} // Removed direct dependency on stock for mapping
                         value={maxParticipants}
                         onChange={(e) => setMaxParticipants(Number(e.target.value))}
                         className="bg-white/5 border-white/10"
                     />
-                    <p className="text-xs text-muted-foreground">Maximum buyers allowed (limited by stock)</p>
+                    <p className="text-xs text-muted-foreground">
+                        Max joiners allowed
+                    </p>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="maxQuantity">
+                        <Package className="h-4 w-4 inline mr-2" />
+                        Campaign Stock
+                    </Label>
+                    <Input
+                        id="maxQuantity"
+                        type="number"
+                        min={maxParticipants}
+                        max={selectedVariant?.stock || 1000}
+                        value={maxQuantity}
+                        onChange={(e) => setMaxQuantity(Number(e.target.value))}
+                        className="bg-white/5 border-white/10"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        Total items for sale
+                    </p>
                 </div>
             </div>
 
@@ -213,22 +274,82 @@ export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }
                 <div className="flex items-center justify-between">
                     <Label>
                         <Percent className="h-4 w-4 inline mr-2" />
-                        Discount Percentage
+                        Discount Tiers
                     </Label>
-                    <span className="text-2xl font-bold text-accent">{discountPercentage}%</span>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addDiscountTier}
+                        disabled={discountTiers.length >= 5}
+                        className="h-8"
+                    >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Tier
+                    </Button>
                 </div>
-                <Slider
-                    value={[discountPercentage]}
-                    onValueChange={([value]) => setDiscountPercentage(value)}
-                    min={5}
-                    max={50}
-                    step={5}
-                    className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>5%</span>
-                    <span>25%</span>
-                    <span>50%</span>
+                <p className="text-xs text-muted-foreground">
+                    Set different discount rates based on the number of participants
+                </p>
+
+                <div className="space-y-3">
+                    {discountTiers
+                        .sort((a, b) => a.minParticipants - b.minParticipants)
+                        .map((tier, index) => (
+                            <Card key={index} className="bg-white/5 border-white/10">
+                                <CardContent className="p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-1 grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-xs">Min Participants</Label>
+                                                <Input
+                                                    type="number"
+                                                    min={index === 0 ? 2 : discountTiers[index - 1].minParticipants + 1}
+                                                    max={
+                                                        index < discountTiers.length - 1
+                                                            ? discountTiers[index + 1].minParticipants - 1
+                                                            : maxParticipants
+                                                    }
+                                                    value={tier.minParticipants}
+                                                    onChange={(e) => updateDiscountTier(index, "minParticipants", Number(e.target.value))}
+                                                    className="h-9 bg-white/5 border-white/10"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs">Discount %</Label>
+                                                <Input
+                                                    type="number"
+                                                    min={5}
+                                                    max={50}
+                                                    step={5}
+                                                    value={tier.discountPercentage}
+                                                    onChange={(e) => updateDiscountTier(index, "discountPercentage", Number(e.target.value))}
+                                                    className="h-9 bg-white/5 border-white/10"
+                                                />
+                                            </div>
+                                        </div>
+                                        {discountTiers.length > 1 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeDiscountTier(index)}
+                                                className="h-9 w-9 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                            >
+                                                <XCircle className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <div className="mt-2 text-xs text-muted-foreground">
+                                        {tier.minParticipants}+ buyers get {tier.discountPercentage}% off (Rp{" "}
+                                        {selectedVariant
+                                            ? (selectedVariant.price * (1 - tier.discountPercentage / 100)).toLocaleString("id-ID")
+                                            : "0"}
+                                        )
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
                 </div>
             </div>
 
@@ -260,91 +381,102 @@ export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }
         </div>
     )
 
-    const renderStep3 = () => (
-        <div className="space-y-6">
-            <div className="text-center pb-4">
-                <Sparkles className="h-12 w-12 mx-auto text-accent mb-2" />
-                <h3 className="text-lg font-semibold">Review Your Group Buy Campaign</h3>
-                <p className="text-sm text-muted-foreground">Confirm the details below before launching</p>
-            </div>
+    const renderStep3 = () => {
+        const minTier = discountTiers[0]
+        const maxTier = discountTiers[discountTiers.length - 1]
 
-            <Card className="bg-white/5 border-white/10">
-                <CardContent className="p-4 space-y-4">
-                    <div className="flex items-center gap-4">
-                        <Image
-                            src={selectedProduct?.image || ""}
-                            alt={selectedProduct?.title || ""}
-                            width={60}
-                            height={60}
-                            className="rounded-lg"
-                        />
-                        <div>
-                            <h4 className="font-semibold">{selectedProduct?.title}</h4>
-                            <p className="text-sm text-muted-foreground">{selectedVariant?.name}</p>
-                        </div>
-                    </div>
-                    <Separator className="bg-white/10" />
+        return (
+            <div className="space-y-6">
+                <div className="text-center pb-4">
+                    <Sparkles className="h-12 w-12 mx-auto text-accent mb-2" />
+                    <h3 className="text-lg font-semibold">Review Your Group Buy Campaign</h3>
+                    <p className="text-sm text-muted-foreground">Confirm the details below before launching</p>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Participants:</span>
-                                <span className="font-medium">
-                                    {minParticipants} - {maxParticipants}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Percent className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Discount:</span>
-                                <span className="font-medium text-green-500">{discountPercentage}%</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Duration:</span>
-                                <span className="font-medium">{expiresInDays} days</span>
+                <Card className="bg-white/5 border-white/10">
+                    <CardContent className="p-4 space-y-4">
+                        <div className="flex items-center gap-4">
+                            <Image
+                                src={selectedProduct?.image || ""}
+                                alt={selectedProduct?.title || ""}
+                                width={60}
+                                height={60}
+                                className="rounded-lg"
+                            />
+                            <div>
+                                <h4 className="font-semibold">{selectedProduct?.title}</h4>
+                                <p className="text-sm text-muted-foreground">{selectedVariant?.name}</p>
                             </div>
                         </div>
+                        <Separator className="bg-white/10" />
+
                         <div className="space-y-3">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Original Price:</span>
                                 <span className="font-medium">Rp {selectedVariant?.price.toLocaleString("id-ID")}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">Discounted Price:</span>
-                                <span className="font-medium text-accent">Rp {calculateDiscountedPrice().toLocaleString("id-ID")}</span>
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Max Participants:</span>
+                                <span className="font-medium">{maxParticipants} joiners</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Campaign Stock:</span>
+                                <span className="font-medium">{maxQuantity} items</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Duration:</span>
+                                <span className="font-medium">{expiresInDays} days</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Auto-activate:</span>
                                 <span className="font-medium">{autoActivate ? "Yes" : "No"}</span>
                             </div>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
 
-            <Card className="bg-gradient-to-r from-accent/20 to-primary/20 border-accent/30">
-                <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                        <TrendingUp className="h-8 w-8 text-accent" />
-                        <div>
-                            <p className="text-sm text-muted-foreground">Potential Revenue (if max reached)</p>
-                            <p className="text-2xl font-bold">Rp {calculatePotentialRevenue().toLocaleString("id-ID")}</p>
+                        <Separator className="bg-white/10" />
+
+                        <div className="space-y-2">
+                            <p className="text-sm font-medium">Discount Tiers:</p>
+                            {discountTiers
+                                .sort((a, b) => a.minParticipants - b.minParticipants)
+                                .map((tier, index) => (
+                                    <div key={index} className="flex items-center justify-between text-sm bg-white/5 p-2 rounded">
+                                        <span className="text-muted-foreground">{tier.minParticipants}+ participants</span>
+                                        <span className="font-medium text-green-400">
+                                            {tier.discountPercentage}% off (Rp{" "}
+                                            {selectedVariant
+                                                ? (selectedVariant.price * (1 - tier.discountPercentage / 100)).toLocaleString("id-ID")
+                                                : "0"}
+                                            )
+                                        </span>
+                                    </div>
+                                ))}
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
 
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-300">
-                    Once created, you can share the group buy link with your customers. The campaign will automatically expire
-                    after {expiresInDays} days if minimum participants are not reached.
-                </p>
+                <Card className="bg-gradient-to-r from-accent/20 to-primary/20 border-accent/30">
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                            <TrendingUp className="h-8 w-8 text-accent" />
+                            <div>
+                                <p className="text-sm text-muted-foreground">Potential Revenue (if max reached)</p>
+                                <p className="text-2xl font-bold">Rp {calculatePotentialRevenue().toLocaleString("id-ID")}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-blue-300">
+                        Customers will unlock higher discounts as more participants join. The campaign will automatically expire
+                        after {expiresInDays} days if minimum participants are not reached.
+                    </p>
+                </div>
             </div>
-        </div>
-    )
+        )
+    }
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -397,8 +529,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }
                         <Button
                             onClick={() => setStep(step + 1)}
                             disabled={
-                                (step === 1 && !selectedVariantId) ||
-                                (step === 2 && (!minParticipants || !maxParticipants || !discountPercentage))
+                                (step === 1 && !selectedVariantId) || (step === 2 && (!maxParticipants || !maxQuantity || discountTiers.length === 0))
                             }
                         >
                             Continue
