@@ -114,20 +114,25 @@ export default function GroupBuyPage() {
         const originalPrice = session.product_variant?.price || 0
         const discountedPrice = originalPrice * (1 - discountPercentage / 100)
 
+        // Get product image from nested product
+        const productImage = session.product_variant?.product?.product_images?.[0]?.image_url || "/placeholder.svg"
+        const productTitle = session.product_variant?.product?.title || "Unknown Product"
+        const variantName = session.product_variant?.name || ""
+
         return (
             <Card className="bg-white/5 border-white/10 hover:border-white/20 transition-colors">
                 <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                         <img
-                            src="/placeholder.svg"
-                            alt={session.product_variant?.name || "Product"}
+                            src={productImage}
+                            alt={productTitle}
                             className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
                         />
                         <div className="flex-1 space-y-3">
                             <div className="flex items-start justify-between gap-2">
                                 <div>
-                                    <h3 className="font-semibold text-base">{session.product_variant?.name || "Unknown Product"}</h3>
-                                    <p className="text-xs text-muted-foreground">SKU: {session.product_variant?.sku}</p>
+                                    <h3 className="font-semibold text-base">{productTitle}</h3>
+                                    <p className="text-xs text-muted-foreground">Variant: {variantName} | SKU: {session.product_variant?.sku}</p>
                                     <p className="text-xs text-muted-foreground font-mono mt-1">{session.session_code}</p>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">

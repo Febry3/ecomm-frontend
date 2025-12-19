@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState, use } from "react"
+import { Suspense, useState, use, useEffect } from "react"
 import type React from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -86,6 +86,51 @@ function EditProductForm({ productId }: { productId: string }) {
             low_stock_threshold: 5
         }]
     )
+
+    // Sync form state when product data changes (e.g., when navigating between products)
+    useEffect(() => {
+        if (product) {
+            setFormData({
+                title: product.title || "",
+                slug: product.slug || "",
+                description: product.description || "",
+                badge: product.badge || "",
+                category_id: product.category_id || 0,
+                is_active: product.is_active ?? true,
+            })
+
+            setImages(
+                product.product_images?.map((img: any) => ({
+                    id: img.id,
+                    url: img.image_url,
+                    isPrimary: img.is_primary,
+                    isExisting: true,
+                })) || []
+            )
+
+            setVariants(
+                product.variants?.map((v: any) => ({
+                    id: v.id,
+                    name: v.name,
+                    sku: v.sku,
+                    price: v.price,
+                    is_active: v.is_active,
+                    current_stock: v.stock?.current_stock || 0,
+                    reserved_stock: v.stock?.reserved_stock || 0,
+                    low_stock_threshold: v.stock?.low_stock_threshold || 5,
+                })) || [{
+                    id: `new-${Date.now()}`,
+                    name: "",
+                    sku: "",
+                    price: 0,
+                    is_active: true,
+                    current_stock: 0,
+                    reserved_stock: 0,
+                    low_stock_threshold: 5
+                }]
+            )
+        }
+    }, [product])
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files

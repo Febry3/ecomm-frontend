@@ -131,7 +131,7 @@ export function useGetSellerProductsQuery() {
 
 export function useGetSellerProduct(id: string) {
     return useSuspenseQuery({
-        queryKey: ["seller-product"],
+        queryKey: ["seller-product", id],
         queryFn: async () => {
             const response = await apiClient.get(`/seller/products/${id}`);
             return response.data.data;

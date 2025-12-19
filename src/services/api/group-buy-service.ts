@@ -25,6 +25,19 @@ export interface GroupBuyTierResponse {
     DiscountPercentage: number;
 }
 
+export interface ProductImageResponse {
+    id: string;
+    product_id: string;
+    image_url: string;
+    created_at: string;
+}
+
+export interface ProductResponse {
+    id: string;
+    title: string;
+    product_images?: ProductImageResponse[];
+}
+
 export interface ProductVariantResponse {
     id: string;
     product_id: string;
@@ -32,8 +45,7 @@ export interface ProductVariantResponse {
     name: string;
     price: number;
     is_active: boolean;
-    created_at: string;
-    updated_at: string;
+    product?: ProductResponse;
 }
 
 export interface SellerResponse {
