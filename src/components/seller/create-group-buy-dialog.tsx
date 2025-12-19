@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useCreateGroupBuySession } from "@/services/api/group-buy-service"
+import { useGetSellerProductsQuery } from "@/services/api/product-service"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
@@ -15,18 +16,6 @@ import { toast } from "sonner"
 import Image from "next/image"
 import { Users, Percent, Calendar, Package, Info, Sparkles, TrendingUp, Plus, XCircle } from "lucide-react"
 
-interface Product {
-    id: string
-    title: string
-    image: string
-    variants: {
-        id: string
-        name: string
-        price: number
-        stock: number
-    }[]
-}
-
 interface DiscountTier {
     minParticipants: number
     discountPercentage: number
@@ -35,15 +24,30 @@ interface DiscountTier {
 interface CreateGroupBuyDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    products: Product[]
     onSuccess?: () => void
 }
 
-export function CreateGroupBuyDialog({ open, onOpenChange, products, onSuccess }: CreateGroupBuyDialogProps) {
+export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGroupBuyDialogProps) {
     const [step, setStep] = useState(1)
     const { mutate: createGroupBuy, isPending: isLoading } = useCreateGroupBuySession()
+    const { data: productsData } = useGetSellerProductsQuery()
 
-    // Form state based on database schema
+    // Transform products data for the dialog
+    const products = useMemo(() => {
+        if (!productsData?.products) return []
+        return productsData.products.map((product) => ({
+            id: product.id,
+            title: product.title,
+            image: product.product_images?.[0]?.image_url || "/placeholder.svg",
+            variants: product.variants?.map((variant) => ({
+                id: variant.id || "",
+                name: variant.name,
+                price: variant.price,
+                stock: variant.stock?.current_stock || 0,
+            })) || [],
+        }))
+    }, [productsData])
+
     const [selectedProductId, setSelectedProductId] = useState("")
     const [selectedVariantId, setSelectedVariantId] = useState("")
     const [discountTiers, setDiscountTiers] = useState<DiscountTier[]>([

@@ -19,10 +19,10 @@ export interface CreateGroupBuyRequest {
 
 // Response types (matching actual API response)
 export interface GroupBuyTierResponse {
-    ID: string;
-    GroupBuySessionID: string;
-    ParticipantThreshold: number;
-    DiscountPercentage: number;
+    id: string;
+    group_buy_session_id: string;
+    participant_threshold: number;
+    discount_percentage: number;
 }
 
 export interface ProductImageResponse {
@@ -38,6 +38,14 @@ export interface ProductResponse {
     product_images?: ProductImageResponse[];
 }
 
+export interface ProductVariantStockResponse {
+    product_variant_id: string;
+    current_stock: number;
+    reserved_stock: number;
+    low_stock_threshold: number;
+    last_updated: string;
+}
+
 export interface ProductVariantResponse {
     id: string;
     product_id: string;
@@ -45,6 +53,7 @@ export interface ProductVariantResponse {
     name: string;
     price: number;
     is_active: boolean;
+    stock?: ProductVariantStockResponse;
     product?: ProductResponse;
 }
 

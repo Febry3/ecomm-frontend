@@ -34,6 +34,10 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "googleusercontent.com",
       },
+      {
+        protocol: "https",
+        hostname: "iatwxegpjmgnhtevhuir.supabase.co"
+      }
     ],
   },
   async headers() {

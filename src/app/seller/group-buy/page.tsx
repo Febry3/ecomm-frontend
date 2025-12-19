@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -21,7 +21,6 @@ import {
 import { toast } from "sonner"
 import { CreateGroupBuyDialog } from "@/components/seller/create-group-buy-dialog"
 import { useGetGroupBuySessions, GroupBuySession } from "@/services/api/group-buy-service"
-import { useGetSellerProductsQuery } from "@/services/api/product-service"
 import {
     Plus,
     Clock,
@@ -35,7 +34,6 @@ import {
     Sparkles,
     CheckCircle2,
     AlertCircle,
-    Loader2,
 } from "lucide-react"
 
 export default function GroupBuyPage() {
@@ -46,23 +44,6 @@ export default function GroupBuyPage() {
 
     // Fetch real data from API
     const { data: sessions = [], isLoading, isError } = useGetGroupBuySessions()
-    const { data: productsData } = useGetSellerProductsQuery()
-
-    // Transform products for the create dialog
-    const products = useMemo(() => {
-        if (!productsData?.products) return []
-        return productsData.products.map((product) => ({
-            id: product.id,
-            title: product.title,
-            image: "/placeholder.svg", // No image field in the Product type
-            variants: product.variants?.map((variant) => ({
-                id: variant.id || "",
-                name: variant.name,
-                price: variant.price,
-                stock: variant.stock?.current_stock || 0,
-            })) || [],
-        }))
-    }, [productsData])
 
     const filteredSessions = (status: string) =>
         sessions.filter(
@@ -108,7 +89,7 @@ export default function GroupBuyPage() {
         // Get the highest applicable discount from tiers
         const getMaxDiscount = () => {
             if (!session.group_buy_tiers?.length) return 0
-            return Math.max(...session.group_buy_tiers.map(t => t.DiscountPercentage))
+            return Math.max(...session.group_buy_tiers.map(t => t.discount_percentage))
         }
         const discountPercentage = getMaxDiscount()
         const originalPrice = session.product_variant?.price || 0
@@ -192,8 +173,12 @@ export default function GroupBuyPage() {
                                         <p className="text-sm font-bold text-green-500">{discountPercentage}%</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-muted-foreground">Original Price</p>
+                                        <p className="text-xs text-muted-foreground">Price</p>
                                         <p className="text-sm font-bold text-accent">Rp {originalPrice.toLocaleString("id-ID")}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Stock</p>
+                                        <p className="text-sm font-bold">{session.product_variant?.stock?.current_stock ?? 0}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -362,7 +347,7 @@ export default function GroupBuyPage() {
             </Tabs>
 
             {/* Create Dialog */}
-            <CreateGroupBuyDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} products={products} />
+            <CreateGroupBuyDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
 
             {/* Cancel Confirmation Dialog */}
             <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
