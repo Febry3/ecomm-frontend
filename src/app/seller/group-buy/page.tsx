@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { CreateGroupBuyDialog } from "@/components/seller/create-group-buy-dialog"
-import { useGetGroupBuySessions, GroupBuySession } from "@/services/api/group-buy-service"
+import { useGetGroupBuySessions, GroupBuySession, useChangeGroupBuySessionStatus } from "@/services/api/group-buy-service"
 import {
     Plus,
     Clock,
@@ -41,6 +41,7 @@ export default function GroupBuyPage() {
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
     const [selectedSession, setSelectedSession] = useState<GroupBuySession | null>(null)
+    const { mutate: changeSessionStatus } = useChangeGroupBuySessionStatus()
 
     // Fetch real data from API
     const { data: sessions = [], isLoading, isError } = useGetGroupBuySessions()
@@ -61,9 +62,11 @@ export default function GroupBuyPage() {
     }
 
     const handleCancelSession = () => {
-        toast.success("Session Cancelled", {
-            description: "The group buy session has been cancelled.",
+        changeSessionStatus({
+            session_id: selectedSession!.id,
+            status: "cancelled",
         })
+
         setCancelDialogOpen(false)
         setSelectedSession(null)
     }
@@ -129,10 +132,6 @@ export default function GroupBuyPage() {
                                                 <DropdownMenuItem onClick={() => copyShareLink(session.session_code)}>
                                                     <Copy className="h-4 w-4 mr-2" />
                                                     Copy Share Link
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem>
-                                                    <Eye className="h-4 w-4 mr-2" />
-                                                    View Details
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     className="text-red-400"

@@ -36,3 +36,8 @@ export interface GroupBuySession {
     }
     status: "cart" | "payment" | "success"
 }
+
+export interface ChangeGroupBuySessionStatusRequest {
+    session_id: string
+    status: string
+}

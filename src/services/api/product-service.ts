@@ -139,3 +139,26 @@ export function useGetSellerProduct(id: string) {
         retry: 1,
     });
 }
+
+// Public products endpoint for homepage
+export function useGetProducts() {
+    return useQuery({
+        queryKey: ["products"],
+        queryFn: async () => {
+            const response = await apiClient.get("/product");
+            return response.data.data;
+        },
+    });
+}
+
+// Public single product endpoint for product detail page
+export function useGetProduct(id: string) {
+    return useQuery({
+        queryKey: ["product", id],
+        queryFn: async () => {
+            const response = await apiClient.get(`/product/${id}`);
+            return response.data.data;
+        },
+        enabled: !!id,
+    });
+}

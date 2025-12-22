@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { useCreateGroupBuySession } from "@/services/api/group-buy-service"
 import { useGetSellerProductsQuery } from "@/services/api/product-service"
 import { Button } from "@/components/ui/button"
@@ -16,10 +19,23 @@ import { toast } from "sonner"
 import Image from "next/image"
 import { Users, Percent, Calendar, Package, Info, Sparkles, TrendingUp, Plus, XCircle } from "lucide-react"
 
-interface DiscountTier {
-    minParticipants: number
-    discountPercentage: number
-}
+// Zod validation schema
+const discountTierSchema = z.object({
+    minParticipants: z.number().min(1, "Minimum 1 participant"),
+    discountPercentage: z.number().min(1, "Minimum 1%").max(50, "Maximum 50%"),
+})
+
+const groupBuyFormSchema = z.object({
+    selectedProductId: z.string().min(1, "Please select a product"),
+    selectedVariantId: z.string().min(1, "Please select a variant"),
+    maxParticipants: z.number().min(2, "Minimum 2 participants").max(1000, "Maximum 1000 participants"),
+    maxQuantity: z.number().min(1, "Minimum quantity is 1"),
+    expiresInDays: z.number().min(1, "Minimum 1 day").max(30, "Maximum 30 days"),
+    discountTiers: z.array(discountTierSchema).min(1, "At least one discount tier required"),
+    autoActivate: z.boolean(),
+})
+
+type GroupBuyFormData = z.infer<typeof groupBuyFormSchema>
 
 interface CreateGroupBuyDialogProps {
     open: boolean
@@ -48,17 +64,32 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
         }))
     }, [productsData])
 
-    const [selectedProductId, setSelectedProductId] = useState("")
-    const [selectedVariantId, setSelectedVariantId] = useState("")
-    const [discountTiers, setDiscountTiers] = useState<DiscountTier[]>([
-        { minParticipants: 3, discountPercentage: 5 },
-        { minParticipants: 5, discountPercentage: 10 },
-        { minParticipants: 10, discountPercentage: 15 },
-    ])
-    const [maxParticipants, setMaxParticipants] = useState(10)
-    const [maxQuantity, setMaxQuantity] = useState(50)
-    const [expiresInDays, setExpiresInDays] = useState(7)
-    const [autoActivate, setAutoActivate] = useState(true)
+    // Form with Zod validation
+    const form = useForm<GroupBuyFormData>({
+        resolver: zodResolver(groupBuyFormSchema),
+        defaultValues: {
+            selectedProductId: "",
+            selectedVariantId: "",
+            maxParticipants: 10,
+            maxQuantity: 50,
+            expiresInDays: 7,
+            discountTiers: [
+                { minParticipants: 3, discountPercentage: 5 },
+                { minParticipants: 5, discountPercentage: 10 },
+                { minParticipants: 10, discountPercentage: 15 },
+            ],
+            autoActivate: true,
+        },
+    })
+
+    const { watch, setValue, formState: { errors } } = form
+    const selectedProductId = watch("selectedProductId")
+    const selectedVariantId = watch("selectedVariantId")
+    const discountTiers = watch("discountTiers")
+    const maxParticipants = watch("maxParticipants")
+    const maxQuantity = watch("maxQuantity")
+    const expiresInDays = watch("expiresInDays")
+    const autoActivate = watch("autoActivate")
 
     const selectedProduct = products.find((p) => p.id === selectedProductId)
     const selectedVariant = selectedProduct?.variants.find((v) => v.id === selectedVariantId)
@@ -79,25 +110,67 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
 
     const resetForm = () => {
         setStep(1)
-        setSelectedProductId("")
-        setSelectedVariantId("")
-        setDiscountTiers([
-            { minParticipants: 3, discountPercentage: 5 },
-            { minParticipants: 5, discountPercentage: 10 },
-            { minParticipants: 10, discountPercentage: 15 },
-        ])
-        setMaxParticipants(10)
-        setMaxQuantity(50)
-        setExpiresInDays(7)
+        form.reset()
+    }
+
+    // Validate step before proceeding
+    const validateStep = (currentStep: number): boolean => {
+        if (currentStep === 1) {
+            const productValid = selectedProductId.length > 0
+            const variantValid = selectedVariantId.length > 0
+            if (!productValid) {
+                toast.error("Please select a product")
+                return false
+            }
+            if (!variantValid) {
+                toast.error("Please select a variant")
+                return false
+            }
+            return true
+        }
+        if (currentStep === 2) {
+            if (maxParticipants < 2) {
+                toast.error("Max participants must be at least 2")
+                return false
+            }
+            if (maxQuantity < 1) {
+                toast.error("Max quantity must be at least 1")
+                return false
+            }
+            if (discountTiers.length === 0) {
+                toast.error("At least one discount tier is required")
+                return false
+            }
+            // Validate tier values
+            for (const tier of discountTiers) {
+                if (tier.minParticipants < 1) {
+                    toast.error("Minimum participants must be at least 1")
+                    return false
+                }
+                if (tier.discountPercentage < 1 || tier.discountPercentage > 50) {
+                    toast.error("Discount must be between 1% and 50%")
+                    return false
+                }
+            }
+            // Check if max participants is greater than highest tier threshold
+            const maxTierThreshold = Math.max(...discountTiers.map(t => t.minParticipants))
+            if (maxParticipants <= maxTierThreshold) {
+                toast.error(`Max participants must be greater than ${maxTierThreshold}`)
+                return false
+            }
+            return true
+        }
+        return true
+    }
+
+    const handleNextStep = () => {
+        if (validateStep(step)) {
+            setStep(step + 1)
+        }
     }
 
     const handleCreate = async () => {
-        if (!selectedVariantId || discountTiers.length === 0 || !maxParticipants || !maxQuantity) {
-            toast.error("Missing fields", {
-                description: "Please fill in all required fields.",
-            })
-            return
-        }
+        if (!validateStep(2)) return
 
         // Construct payload matching backend API spec
         const payload = {
@@ -123,7 +196,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
 
     const addDiscountTier = () => {
         const lastTier = discountTiers[discountTiers.length - 1]
-        setDiscountTiers([
+        setValue("discountTiers", [
             ...discountTiers,
             {
                 minParticipants: lastTier.minParticipants + 2,
@@ -134,14 +207,14 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
 
     const removeDiscountTier = (index: number) => {
         if (discountTiers.length > 1) {
-            setDiscountTiers(discountTiers.filter((_, i) => i !== index))
+            setValue("discountTiers", discountTiers.filter((_, i) => i !== index))
         }
     }
 
-    const updateDiscountTier = (index: number, field: keyof DiscountTier, value: number) => {
+    const updateDiscountTier = (index: number, field: "minParticipants" | "discountPercentage", value: number) => {
         const newTiers = [...discountTiers]
         newTiers[index][field] = value
-        setDiscountTiers(newTiers)
+        setValue("discountTiers", newTiers)
     }
 
     const renderStep1 = () => (
@@ -151,8 +224,8 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
                 <Select
                     value={selectedProductId}
                     onValueChange={(value) => {
-                        setSelectedProductId(value)
-                        setSelectedVariantId("")
+                        setValue("selectedProductId", value)
+                        setValue("selectedVariantId", "")
                     }}
                 >
                     <SelectTrigger id="product">
@@ -180,7 +253,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
             {selectedProduct && (
                 <div className="space-y-2">
                     <Label htmlFor="variant">Select Variant</Label>
-                    <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
+                    <Select value={selectedVariantId} onValueChange={(value) => setValue("selectedVariantId", value)}>
                         <SelectTrigger id="variant">
                             <SelectValue placeholder="Choose a variant" />
                         </SelectTrigger>
@@ -243,7 +316,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
                         min={Math.max(...discountTiers.map((t) => t.minParticipants)) + 1}
                         // max={selectedVariant?.stock || 100} // Removed direct dependency on stock for mapping
                         value={maxParticipants}
-                        onChange={(e) => setMaxParticipants(Number(e.target.value))}
+                        onChange={(e) => setValue("maxParticipants", Number(e.target.value))}
                         className="bg-white/5 border-white/10"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -261,7 +334,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
                         min={maxParticipants}
                         max={selectedVariant?.stock || 1000}
                         value={maxQuantity}
-                        onChange={(e) => setMaxQuantity(Number(e.target.value))}
+                        onChange={(e) => setValue("maxQuantity", Number(e.target.value))}
                         className="bg-white/5 border-white/10"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -358,7 +431,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
                     <Calendar className="h-4 w-4 inline mr-2" />
                     Campaign Duration
                 </Label>
-                <Select value={expiresInDays.toString()} onValueChange={(v) => setExpiresInDays(Number(v))}>
+                <Select value={expiresInDays.toString()} onValueChange={(v) => setValue("expiresInDays", Number(v))}>
                     <SelectTrigger id="expiresIn" className="bg-white/5 border-white/10">
                         <SelectValue />
                     </SelectTrigger>
@@ -376,7 +449,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
                     <Label htmlFor="autoActivate">Auto-activate when minimum reached</Label>
                     <p className="text-xs text-muted-foreground">Automatically process orders when min participants join</p>
                 </div>
-                <Switch id="autoActivate" checked={autoActivate} onCheckedChange={setAutoActivate} />
+                <Switch id="autoActivate" checked={autoActivate} onCheckedChange={(checked) => setValue("autoActivate", checked)} />
             </div>
         </div>
     )
@@ -527,7 +600,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
                     )}
                     {step < 3 ? (
                         <Button
-                            onClick={() => setStep(step + 1)}
+                            onClick={handleNextStep}
                             disabled={
                                 (step === 1 && !selectedVariantId) || (step === 2 && (!maxParticipants || !maxQuantity || discountTiers.length === 0))
                             }
