@@ -31,7 +31,7 @@ export default function Navbar() {
         { href: "/categories", label: "Categories", hasDropdown: false },
         { href: "/deals", label: "Deals" },
         { href: "/forum", label: "Forum" },
-        { href: "/about", label: "About us" },
+        { href: "/about-us", label: "About us" },
     ];
 
     const isActive = (href: string) => pathname === href;
