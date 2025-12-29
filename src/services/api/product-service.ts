@@ -179,3 +179,14 @@ export function useGetProduct(id: string) {
         enabled: !!id,
     });
 }
+
+export function useGetProductVariant(variantId: string) {
+    return useQuery({
+        queryKey: ["product-variant", variantId],
+        queryFn: async () => {
+            const response = await apiClient.get<{ data: any }>(`/product/variants/${variantId}`);
+            return response.data.data;
+        },
+        enabled: !!variantId,
+    });
+}

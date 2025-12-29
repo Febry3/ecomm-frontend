@@ -16,7 +16,19 @@ export interface CreateGroupBuyRequest {
     max_quantity: number;
     expires_at: string;
     tiers: GroupBuyTierRequest[];
+    title?: string;
 }
+
+// ... existing code ...
+
+export async function createBuyerGroupBuySession(data: { productVariantId: string, title: string }) {
+    const response = await apiClient.post<{ data: { id: string } }>("/group-buy", {
+        product_variant_id: data.productVariantId,
+        title: data.title
+    });
+    return response.data.data.id;
+}
+
 
 // Response types (matching actual API response)
 export interface GroupBuyTierResponse {
@@ -77,6 +89,7 @@ export interface SellerResponse {
 
 export interface GroupBuySession {
     id: string;
+    title?: string;
     session_code: string;
     product_variant_id: string;
     seller_id: number;
@@ -141,3 +154,86 @@ export function useChangeGroupBuySessionStatus() {
         },
     });
 }
+
+
+export async function getGroupBuySession(id: string, token?: string) {
+    // Mock Data Implementation
+    return new Promise<GroupBuySession>((resolve) => {
+        setTimeout(() => {
+            resolve({
+                id: "1",
+                session_code: "g7JekL0d",
+                product_variant_id: "variant-1",
+                seller_id: 1,
+                min_participants: 1,
+                max_participants: 10,
+                current_participants: 5,
+                max_quantity: 100,
+                status: "active",
+                expires_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                product_variant: {
+                    id: "variant-1",
+                    product_id: "product-1",
+                    sku: "KEY-FAN-MAX",
+                    name: "Keyboard Gaming Fantech MAXFIT",
+                    price: 427350,
+                    is_active: true,
+                    product: {
+                        id: "product-1",
+                        title: "Keyboard Gaming Fantech MAXFIT",
+                        product_images: [
+                            {
+                                id: "img-1",
+                                product_id: "product-1",
+                                image_url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=1000&auto=format&fit=crop",
+                                created_at: new Date().toISOString()
+                            }
+                        ]
+                    }
+                },
+                seller: {
+                    id: 1,
+                    user_id: 1,
+                    store_name: "Fantech Official",
+                    store_slug: "fantech-official",
+                    description: "Official Fantech Store",
+                    logo_url: "",
+                    business_email: "support@fantech.id",
+                    business_phone: "08123456789",
+                    status: "active",
+                    is_verified: true,
+                    average_rating: 4.8,
+                    total_sales: 1000,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                },
+                group_buy_tiers: [
+                    {
+                        id: "tier-1",
+                        group_buy_session_id: "1",
+                        participant_threshold: 5,
+                        discount_percentage: 10
+                    }
+                ]
+            } as GroupBuySession);
+        }, 100);
+    });
+}
+
+
+export async function getSessionIdByCode(code: string): Promise<string | null> {
+    // Mock Data Implementation
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            if (code === "g7JekL0d") {
+                resolve("1");
+            } else {
+                resolve(null);
+            }
+        }, 1000);
+    });
+}
+
+

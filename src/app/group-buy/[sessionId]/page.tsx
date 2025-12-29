@@ -1,49 +1,89 @@
+
 import { GroupBuySessionComponent } from "@/components/group-buy-session"
-import type { GroupBuySession } from "@/types/group-buy"
+import { getGroupBuySession } from "@/services/api/group-buy-service"
+import { getUserAddresses } from "@/services/api/address-service"
+import type { GroupBuySession as UIGroupBuySession } from "@/types/group-buy"
+import { cookies } from "next/headers"
 
-// Mock data for demonstration
-const mockSession: GroupBuySession = {
-    id: "1",
-    sessionCode: "g7JekL0d",
-    product: {
-        id: "1",
-        title: "Keyboard Gaming Fantech MAXFIT",
-        image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=1000&auto=format&fit=crop",
-        rating: 4.5,
-        reviewCount: 30,
-        originalPrice: 467350,
-        discountedPrice: 427350,
-    },
-    participants: [
-        { id: "1", name: "Rayan Astolfo", quantity: 1, isYou: true },
-        { id: "2", name: "Alfathaba", quantity: 1 },
-        { id: "3", name: "Febry T", quantity: 1 },
-        { id: "4", name: "Hafid Alaniyar", quantity: 1 },
-        { id: "5", name: "Gina Soraya", quantity: 1 },
-    ],
-    maxParticipants: 10,
-    coupon: {
-        code: "LOOTBOX1111",
-        discount: 20000,
-    },
-    shippingAddress: {
-        name: "Rino Setiawan Pusat, Jaya Timur Jaya, Bevan, Kamar No. 15, Lt 21",
-        address:
-            "Sukabumi No.18, RT.9/RW.10/06, Kebayoran Cilandak, Kecamatan Ciayumajakuning, Kota Bandung Utara, (Kost Rumahan) (Dekat Jalan Raya Raihan) (Halaman 1600), DKI Jaya)",
-    },
-    priceDetails: {
-        itemPrice: 427350,
-        groupDiscount: 20000,
-        deliveryCharges: 20000,
-        totalAmount: 427350,
-    },
-    status: "cart",
-}
-
-export default function GroupBuySessionPage({
+export default async function GroupBuySessionPage({
     params,
 }: {
-    params: { sessionId: string }
+    params: Promise<{ sessionId: string }>
 }) {
-    return <GroupBuySessionComponent session={mockSession} />
+    // 1. Await params (Next.js 15 requirement)
+    const { sessionId } = await params
+
+    // 2. Get auth token
+    const cookieStore = await cookies()
+    const token = cookieStore.get("authToken")?.value
+
+    // 3. Parallel Data Fetching
+    const [sessionData, addressData] = await Promise.all([
+        getGroupBuySession(sessionId, token),
+        getUserAddresses(token || ""),
+    ])
+
+    // 4. Map API Response to UI Model
+    const currentPrice = sessionData.product_variant.price
+    const originalPrice = sessionData.product_variant.product?.product_images?.[0]?.product_id ?
+        currentPrice * 1.2 : currentPrice // Mock original price logic if not in API
+
+    // Find applicable tier
+    const currentTier = sessionData.group_buy_tiers
+        .sort((a, b) => b.participant_threshold - a.participant_threshold)
+        .find(tier => (sessionData.current_participants || 0) >= tier.participant_threshold)
+        || sessionData.group_buy_tiers[0] // fallback to first tier
+
+    const discountAmount = currentTier ? (currentPrice * currentTier.discount_percentage / 100) : 0
+    const discountedPrice = currentPrice - discountAmount
+
+    // Helper to calculate price details
+    const deliveryCharges = 20000 // Fixed for now, can come from API later
+
+    // Map Participants (mocking 'isYou' logic mostly, but checking ID if available)
+    // Since API doesn't fully return user details in participant list yet in `GroupBuySession` type 
+    // we might need to rely on what's available or mock.
+    // However, looking at `GroupBuySession` type in service:
+    // It has `group_buy_tiers` but NO `participants` array in the interface definition!
+    // The previous mock had it. I need to be careful here.
+    // The service definition `GroupBuySession` has:
+    // current_participants?: number; 
+    // BUT NO ARRAY. 
+    // Result: I must create a mock array or empty array for now to prevent crash.
+
+    const mockParticipants = [
+        { id: "1", name: "User " + (sessionData.current_participants || 1), quantity: 1, isYou: true }
+    ]
+
+    const defaultAddress = addressData.find(a => a.is_default) || addressData[0]
+
+    const mappedSession: UIGroupBuySession = {
+        id: sessionData.id,
+        sessionCode: sessionData.session_code,
+        product: {
+            id: sessionData.product_variant.product?.id || "",
+            title: sessionData.product_variant.product?.title || sessionData.product_variant.name,
+            image: sessionData.product_variant.product?.product_images?.[0]?.image_url || "/placeholder.svg",
+            rating: 4.5, // Mock
+            reviewCount: 100, // Mock
+            originalPrice: originalPrice,
+            discountedPrice: discountedPrice,
+        },
+        participants: mockParticipants, // API limitation workaround
+        maxParticipants: sessionData.max_participants,
+        coupon: undefined, // No coupon in API response yet
+        shippingAddress: {
+            name: defaultAddress?.receiver_name || "No Address Selected",
+            address: defaultAddress ? `${defaultAddress.street_address}, ${defaultAddress.city}, ${defaultAddress.province}` : "Please add an address",
+        },
+        priceDetails: {
+            itemPrice: currentPrice,
+            groupDiscount: discountAmount,
+            deliveryCharges: deliveryCharges,
+            totalAmount: discountedPrice + deliveryCharges,
+        },
+        status: (sessionData.status === "active") ? "cart" : "success", // Simple mapping
+    }
+
+    return <GroupBuySessionComponent session={mappedSession} />
 }

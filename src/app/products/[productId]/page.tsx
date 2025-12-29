@@ -211,8 +211,9 @@ export default function ProductPage() {
                         </div>
                         <Button
                             variant="secondary"
-                            className="w-full h-12 text-base font-semibold text-primary bg-primary/10 hover:bg-primary/20"
-                            onClick={() => router.push(`/group-buy/${product.id}`)}
+                            className="w-full h-12 text-base font-semibold text-primary bg-primary/10 hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => router.push(`/group-buy/discovery/${product.id}?variantId=${selectedVariantId}`)}
+                            disabled={!selectedVariant?.group_buy_sessions || selectedVariant.group_buy_sessions.length === 0}
                         >
                             Join Group Buy
                         </Button>
