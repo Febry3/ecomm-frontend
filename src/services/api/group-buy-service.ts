@@ -19,14 +19,13 @@ export interface CreateGroupBuyRequest {
     title?: string;
 }
 
-// ... existing code ...
 
 export async function createBuyerGroupBuySession(data: { productVariantId: string, title: string }) {
-    const response = await apiClient.post<{ data: { id: string } }>("/group-buy", {
+    const response = await apiClient.post<{ data: { session_code: string } }>("/group-buy", {
         product_variant_id: data.productVariantId,
         title: data.title
     });
-    return response.data.data.id;
+    return response.data.data.session_code;
 }
 
 

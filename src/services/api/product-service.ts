@@ -75,11 +75,8 @@ export function useUpdateProduct(id: string) {
         mutationFn: async ({ data, newImages, existingImageIds, primaryImageIndex }: UpdateProductWithImagesParams) => {
             const formData = new FormData();
 
-            // Append product data as JSON string
             formData.append("data", JSON.stringify(data));
             formData.append("primary_image_index", String(primaryImageIndex));
-
-            // Append existing image IDs (images to keep)
             formData.append("existing_image_ids", JSON.stringify(existingImageIds));
 
             // Only append new image files if there are any

@@ -18,17 +18,14 @@ import { Label } from "@/components/ui/label"
 import { createBuyerGroupBuySession, getSessionIdByCode } from "@/services/api/group-buy-service"
 import { useGetProductVariant } from "@/services/api/product-service"
 import { ArrowLeft, ArrowRight, Plus, Search, Users } from "lucide-react"
-import Image from "next/image"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
 
 export default function GroupBuyDiscoveryPage() {
     const router = useRouter()
-    // Fetch specific variant if passed (per user request for new API response)
-    const searchParams = useSearchParams()
-    const variantIdParam = searchParams.get("variantId")
-    const { data: selectedVariant, isLoading: isVariantLoading } = useGetProductVariant(variantIdParam || "")
+    const { variantId } = useParams()
+    const { data: selectedVariant, isLoading: isVariantLoading } = useGetProductVariant(variantId as string || "")
 
     const [inviteCode, setInviteCode] = useState("")
     const [isJoining, setIsJoining] = useState(false)
@@ -36,7 +33,7 @@ export default function GroupBuyDiscoveryPage() {
     // Create Session State
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const [newSessionTitle, setNewSessionTitle] = useState("")
-    const [selectedVariantId, setSelectedVariantId] = useState<string>(variantIdParam || "")
+    const [selectedVariantId, setSelectedVariantId] = useState<string>(variantId as string || "")
     const [isCreating, setIsCreating] = useState(false)
 
     const handleCreateSession = async () => {
@@ -51,8 +48,9 @@ export default function GroupBuyDiscoveryPage() {
 
             toast.success("Session Created!", { description: `Group buy "${newSessionTitle}" started.` })
             router.push(`/group-buy/${sessionId}`)
-        } catch (error) {
-            toast.error("Error", { description: "Failed to create session." })
+        } catch (error: any) {
+            console.log(error)
+            toast.error("Failed to create session.", { description: error.response?.data?.error })
         } finally {
             setIsCreating(false)
             setIsCreateDialogOpen(false)
@@ -88,8 +86,6 @@ export default function GroupBuyDiscoveryPage() {
                 <Button variant="ghost" onClick={() => router.back()} className="gap-2">
                     <ArrowLeft className="w-4 h-4" /> Back to Product
                 </Button>
-
-                {/* Product Summary Header */}
 
                 {/* Product Summary Header - Simplified as we rely on variant */}
                 <div className="flex gap-4 items-center mb-8">
