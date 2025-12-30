@@ -187,19 +187,21 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                         <div className="lg:col-span-2 space-y-4">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-semibold text-foreground">Group Buying #{session.sessionCode}</h2>
-                                <Button variant="outline" size="sm" onClick={handleCopyInviteLink} className="gap-2 bg-transparent">
-                                    {copiedLink ? (
-                                        <>
-                                            <Check className="w-4 h-4" />
-                                            Copied!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy className="w-4 h-4" />
-                                            Invite Friends
-                                        </>
-                                    )}
-                                </Button>
+                                {session.isOrganizer && (
+                                    <Button variant="outline" size="sm" onClick={handleCopyInviteLink} className="gap-2 bg-transparent">
+                                        {copiedLink ? (
+                                            <>
+                                                <Check className="w-4 h-4" />
+                                                Copied!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy className="w-4 h-4" />
+                                                Invite Friends
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
                             </div>
 
                             <Card className="bg-card/50 backdrop-blur border-border divide-y divide-border">
@@ -224,7 +226,11 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                             </div>
                                             <div>
                                                 <span className="text-foreground font-medium">{participant.name}</span>
-                                                {participant.isYou && <span className="text-accent ml-2">- You</span>}
+                                                {participant.isYou && (
+                                                    <Badge variant="secondary" className="ml-2 h-5 text-[10px] px-1.5 bg-accent/20 text-accent hover:bg-accent/30 border-0">
+                                                        You
+                                                    </Badge>
+                                                )}
                                             </div>
                                         </div>
                                         <span className="text-accent font-medium">× {participant.quantity}</span>
