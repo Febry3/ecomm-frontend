@@ -42,14 +42,53 @@ export default function ProductPage() {
 
     if (isLoading) {
         return (
-            <div className="container mx-auto px-4 py-8">
-                <div className="grid lg:grid-cols-2 gap-12">
-                    <div className="aspect-square bg-gray-100 rounded-2xl animate-pulse" />
-                    <div className="flex flex-col gap-6">
-                        <div className="h-10 bg-gray-100 rounded-lg w-3/4 animate-pulse" />
-                        <div className="h-6 bg-gray-100 rounded-lg w-1/4 animate-pulse" />
-                        <div className="h-12 bg-gray-100 rounded-lg w-1/2 animate-pulse" />
-                        <div className="h-64 bg-gray-100 rounded-2xl animate-pulse" />
+            <div className="container mx-auto px-6 md:px-12 lg:px-24 py-8">
+                <div className="grid lg:grid-cols-12 gap-8 xl:gap-14">
+                    {/* Image Skeleton */}
+                    <div className="lg:col-span-6">
+                        <div className="aspect-square bg-muted/60 rounded-3xl animate-pulse" />
+                        <div className="grid grid-cols-4 gap-4 mt-4">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="aspect-square bg-muted/40 rounded-xl animate-pulse" />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Content Skeleton */}
+                    <div className="lg:col-span-6 flex flex-col gap-8">
+                        {/* Header */}
+                        <div className="space-y-4">
+                            <div className="h-10 md:h-12 bg-muted/60 rounded-xl w-3/4 animate-pulse" />
+                            <div className="flex gap-4">
+                                <div className="h-5 bg-muted/40 rounded-md w-32 animate-pulse" />
+                                <div className="h-5 bg-muted/40 rounded-md w-24 animate-pulse" />
+                            </div>
+                        </div>
+
+                        {/* Price */}
+                        <div className="h-10 bg-muted/60 rounded-xl w-48 animate-pulse" />
+
+                        {/* Variants */}
+                        <div className="space-y-3">
+                            <div className="h-5 bg-muted/40 rounded-md w-24 animate-pulse" />
+                            <div className="flex gap-3">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="h-14 w-32 bg-muted/40 rounded-xl animate-pulse" />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Quantity */}
+                        <div className="h-20 bg-muted/20 rounded-xl w-full animate-pulse border border-border/40" />
+
+                        {/* Buttons */}
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="h-14 bg-muted/60 rounded-xl animate-pulse" />
+                                <div className="h-14 bg-muted/40 rounded-xl animate-pulse" />
+                            </div>
+                            <div className="h-14 bg-muted/60 rounded-xl animate-pulse" />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -82,8 +121,8 @@ export default function ProductPage() {
                             <button
                                 onClick={() => setIsLiked(!isLiked)}
                                 className={`p-2 rounded-full transition-all duration-200 ${isLiked
-                                        ? "bg-[#1e293b] text-red-500"
-                                        : "bg-[#1e293b]/80 hover:bg-[#1e293b] text-muted-foreground hover:text-red-500"
+                                    ? "bg-[#1e293b] text-red-500"
+                                    : "bg-[#1e293b]/80 hover:bg-[#1e293b] text-muted-foreground hover:text-red-500"
                                     }`}
                             >
                                 <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
@@ -118,7 +157,60 @@ export default function ProductPage() {
                         </span>
                     </div>
 
-                    {/* Quantity & Stock */}
+                    {/* Variant Selector */}
+                    {hasVariants && (
+                        <div className="space-y-3 pt-2">
+                            <label className="text-sm font-medium text-foreground">Select Variant</label>
+                            <div className="flex flex-wrap gap-3">
+                                {variants.map((v: any) => {
+                                    const isSelected = selectedVariantId === v.id;
+                                    const isOutOfStock = v.stock?.current_stock === 0;
+
+                                    return (
+                                        <button
+                                            key={v.id}
+                                            onClick={() => {
+                                                if (!isOutOfStock) {
+                                                    setSelectedVariantId(v.id);
+                                                    setQuantity(1);
+                                                }
+                                            }}
+                                            disabled={isOutOfStock}
+                                            className={`
+                                                 group relative flex items-center gap-3 px-4 py-2 rounded-xl border transition-all
+                                                 ${isSelected
+                                                    ? "border-[#10b981] bg-[#10b981]/10 text-[#10b981]"
+                                                    : "border-border hover:border-[#10b981]/50 text-foreground"
+                                                }
+                                                 ${isOutOfStock ? "opacity-50 cursor-not-allowed bg-secondary/50" : "cursor-pointer"}
+                                             `}
+                                        >
+                                            <div className="relative w-8 h-8 rounded overflow-hidden bg-white shrink-0 border border-border/20">
+                                                <Image
+                                                    src={product.product_images?.[0]?.image_url || "/placeholder.svg"}
+                                                    alt={v.name}
+                                                    fill
+                                                    className="object-contain"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col items-start">
+                                                <span className="font-semibold text-xs">{v.name}</span>
+                                                {v.stock?.current_stock > 0 && v.stock?.current_stock <= 5 && (
+                                                    <span className="text-[10px] text-orange-500 font-medium">
+                                                        {v.stock.current_stock} left
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {isSelected && (
+                                                <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#10b981] rounded-bl-md rounded-tr-md" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                     <div className="flex items-center gap-8 border-y border-border/50 py-6">
                         <div className="flex items-center gap-4">
                             <button
@@ -203,12 +295,7 @@ export default function ProductPage() {
                         </div>
                     </div>
 
-                    {/* Variant Selector - Hidden/Optional based on design, but kept for logic */}
-                    {hasVariants && (
-                        <div className="opacity-0 h-0 overflow-hidden">
-                            {/* Logic handled by state, currently using defaults. */}
-                        </div>
-                    )}
+
 
                 </div>
             </div>

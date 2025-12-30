@@ -37,6 +37,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "iatwxegpjmgnhtevhuir.supabase.co"
+      },
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com"
       }
     ],
   },

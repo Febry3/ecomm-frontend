@@ -23,6 +23,10 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
     const [showAllParticipants, setShowAllParticipants] = useState(false)
     const [couponCode, setCouponCode] = useState("")
     const [copiedLink, setCopiedLink] = useState(false)
+
+    // Initialize quantity from user's participant entry if they have joined
+    const userParticipant = session.participants.find(p => p.isYou)
+    // Business Rule: Limit to 1 per user, so force quantity to 1 even if API returns more
     const [quantity, setQuantity] = useState(1)
 
     // Address State
@@ -95,9 +99,11 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                 <span className="text-xs text-muted-foreground">({session.product.reviewCount})</span>
                             </div>
                             <div className="flex items-center gap-4">
-                                <span className="text-lg text-muted-foreground line-through">
-                                    Rp. {session.product.originalPrice.toLocaleString("id-ID")}
-                                </span>
+                                {session.product.originalPrice > session.product.discountedPrice && (
+                                    <span className="text-lg text-muted-foreground line-through">
+                                        Rp. {session.product.originalPrice.toLocaleString("id-ID")}
+                                    </span>
+                                )}
                                 <span className="text-2xl font-bold text-accent">
                                     Rp. {session.product.discountedPrice.toLocaleString("id-ID")}
                                 </span>
@@ -326,26 +332,29 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                             <Card className="bg-card/50 backdrop-blur border-border p-4 space-y-3">
                                 <h3 className="text-lg font-semibold text-foreground">Quantity</h3>
                                 <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2 p-1 border rounded-xl w-fit bg-secondary/30">
+                                    <div className="flex items-center gap-2 p-1 border rounded-xl w-fit bg-secondary/30 opacity-60">
                                         <button
-                                            onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                            disabled={quantity <= 1}
-                                            className="p-2 hover:bg-background rounded-lg transition-colors disabled:opacity-50"
+                                            disabled
+                                            className="p-2 rounded-lg transition-colors cursor-not-allowed opacity-50"
                                         >
                                             <Minus className="w-4 h-4" />
                                         </button>
-                                        <span className="w-8 text-center font-semibold text-lg">{quantity}</span>
+                                        <span className="w-8 text-center font-semibold text-lg">1</span>
                                         <button
-                                            onClick={() => setQuantity(Math.min(session.product.stock || 100, quantity + 1))}
-                                            disabled={quantity >= (session.product.stock || 100)}
-                                            className="p-2 hover:bg-background rounded-lg transition-colors disabled:opacity-50"
+                                            disabled
+                                            className="p-2 rounded-lg transition-colors cursor-not-allowed opacity-50"
                                         >
                                             <Plus className="w-4 h-4" />
                                         </button>
                                     </div>
-                                    <span className="text-sm text-muted-foreground">
-                                        {session.product.stock ? `${session.product.stock} available` : 'In Stock'}
-                                    </span>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-foreground font-medium">
+                                            Limit: 1 per user
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {session.product.stock ? `${session.product.stock} available` : 'In Stock'}
+                                        </span>
+                                    </div>
                                 </div>
                             </Card>
 
@@ -362,12 +371,14 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                             Rp. {(session.product.originalPrice * quantity).toLocaleString("id-ID")}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Group Discount</span>
-                                        <span className="text-red-500">
-                                            - Rp. {((session.product.originalPrice - session.product.discountedPrice) * quantity).toLocaleString("id-ID")}
-                                        </span>
-                                    </div>
+                                    {session.product.originalPrice > session.product.discountedPrice && (
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Group Discount</span>
+                                            <span className="text-red-500">
+                                                - Rp. {((session.product.originalPrice - session.product.discountedPrice) * quantity).toLocaleString("id-ID")}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Delivery Charges</span>
                                         <span className="text-foreground">
