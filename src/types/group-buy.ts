@@ -4,6 +4,7 @@ export interface GroupBuyParticipant {
     avatar?: string
     quantity: number
     isYou?: boolean
+    status?: string
 }
 
 export interface GroupBuySession {
@@ -36,6 +37,7 @@ export interface GroupBuySession {
         totalAmount: number
     }
     status: "cart" | "payment" | "success"
+    isOrganizer?: boolean
 }
 
 export interface ChangeGroupBuySessionStatusRequest {

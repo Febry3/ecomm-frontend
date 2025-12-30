@@ -169,6 +169,21 @@ export interface GroupBuySessionDetailsResponse {
         expires_at: string;
         created_at: string;
         updated_at: string;
+        members: {
+            id: string;
+            session_id: string;
+            user_id: number;
+            order_id: string | null;
+            quantity: number;
+            status: string;
+            joined_at: string;
+            user: {
+                id: number;
+                username: string;
+                email: string;
+                profile_url: string;
+            };
+        }[];
     };
     address: {
         address_id: string;
@@ -234,6 +249,20 @@ export async function getSessionIdByCode(code: string): Promise<string | null> {
     } catch {
         return null;
     }
+}
+
+export function useJoinGroupBuySession() {
+    return useMutation({
+        mutationFn: async (sessionCode: string) => {
+            await apiClient.post(`/group-buy/${sessionCode}/join`);
+        },
+        onSuccess: () => {
+            toast.success("Successfully joined the group buy session!");
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.error || "Failed to join session");
+        },
+    });
 }
 
 

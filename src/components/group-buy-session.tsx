@@ -1,12 +1,14 @@
 "use client"
 
+import { QRCodeSVG } from "qrcode.react"
+
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Star, ChevronDown, X, Copy, Check, Minus, Plus } from "lucide-react"
+import { Star, ChevronDown, X, Copy, Check, Minus, Plus, QrCode } from "lucide-react"
 import type { GroupBuySession } from "@/types/group-buy"
 import type { Address } from "@/types/address"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -23,6 +25,17 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
     const [showAllParticipants, setShowAllParticipants] = useState(false)
     const [couponCode, setCouponCode] = useState("")
     const [copiedLink, setCopiedLink] = useState(false)
+    const [shareLink, setShareLink] = useState("")
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            setShareLink(`${window.location.origin}/group-buy/join/${session.sessionCode}`)
+        }
+    }, [session.sessionCode])
+
+    // Initialize quantity from user's participant entry if they have joined
+    const userParticipant = session.participants.find(p => p.isYou)
+    // Business Rule: Limit to 1 per user, so force quantity to 1 even if API returns more
     const [quantity, setQuantity] = useState(1)
 
     // Address State
@@ -43,8 +56,8 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
     const totalAmount = itemTotal + session.priceDetails.deliveryCharges
 
     const handleCopyInviteLink = () => {
-        const link = `${window.location.origin}/group-buy/join/${session.sessionCode}`
-        navigator.clipboard.writeText(link)
+        if (!shareLink) return
+        navigator.clipboard.writeText(shareLink)
         setCopiedLink(true)
         setTimeout(() => setCopiedLink(false), 2000)
     }
@@ -95,9 +108,11 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                 <span className="text-xs text-muted-foreground">({session.product.reviewCount})</span>
                             </div>
                             <div className="flex items-center gap-4">
-                                <span className="text-lg text-muted-foreground line-through">
-                                    Rp. {session.product.originalPrice.toLocaleString("id-ID")}
-                                </span>
+                                {session.product.originalPrice > session.product.discountedPrice && (
+                                    <span className="text-lg text-muted-foreground line-through">
+                                        Rp. {session.product.originalPrice.toLocaleString("id-ID")}
+                                    </span>
+                                )}
                                 <span className="text-2xl font-bold text-accent">
                                     Rp. {session.product.discountedPrice.toLocaleString("id-ID")}
                                 </span>
@@ -176,24 +191,48 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
 
                 {/* Main Content Grid */}
                 {currentStep === "cart" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-24 md:pb-0">
                         {/* Left Column - Participants */}
                         <div className="lg:col-span-2 space-y-4">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <h2 className="text-xl font-semibold text-foreground">Group Buying #{session.sessionCode}</h2>
-                                <Button variant="outline" size="sm" onClick={handleCopyInviteLink} className="gap-2 bg-transparent">
-                                    {copiedLink ? (
-                                        <>
-                                            <Check className="w-4 h-4" />
-                                            Copied!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy className="w-4 h-4" />
-                                            Invite Friends
-                                        </>
-                                    )}
-                                </Button>
+                                {session.isOrganizer && (
+                                    <div className="flex gap-2 w-full sm:w-auto">
+                                        <Dialog>
+                                            <DialogTrigger asChild>
+                                                <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 bg-transparent">
+                                                    <QrCode className="w-4 h-4" />
+                                                    Show QR
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6">
+                                                <DialogHeader>
+                                                    <DialogTitle className="text-center">Scan to Join Group Buy</DialogTitle>
+                                                </DialogHeader>
+                                                <div className="p-6 bg-white rounded-xl shadow-sm border mt-4">
+                                                    {shareLink && <QRCodeSVG value={shareLink} size={200} />}
+                                                </div>
+                                                <p className="text-sm text-muted-foreground text-center mt-4">
+                                                    Share this QR code with your friends so they can join instantly!
+                                                </p>
+                                            </DialogContent>
+                                        </Dialog>
+
+                                        <Button variant="outline" size="sm" onClick={handleCopyInviteLink} className="flex-1 sm:flex-none gap-2 bg-transparent">
+                                            {copiedLink ? (
+                                                <>
+                                                    <Check className="w-4 h-4" />
+                                                    Copied!
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Copy className="w-4 h-4" />
+                                                    Invite Friends
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
 
                             <Card className="bg-card/50 backdrop-blur border-border divide-y divide-border">
@@ -203,7 +242,7 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                         className="flex items-center justify-between p-4 hover:bg-accent/5 transition-colors"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-lg font-semibold">
+                                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-lg font-semibold flex-shrink-0">
                                                 {participant.avatar ? (
                                                     <Image
                                                         src={participant.avatar || "/placeholder.svg"}
@@ -216,12 +255,18 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                                     participant.name.charAt(0).toUpperCase()
                                                 )}
                                             </div>
-                                            <div>
-                                                <span className="text-foreground font-medium">{participant.name}</span>
-                                                {participant.isYou && <span className="text-accent ml-2">- You</span>}
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-foreground font-medium truncate max-w-[120px] sm:max-w-[200px]">{participant.name}</span>
+                                                    {participant.isYou && (
+                                                        <Badge variant="secondary" className="h-5 text-[10px] px-1.5 bg-accent/20 text-accent hover:bg-accent/30 border-0 flex-shrink-0">
+                                                            You
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                        <span className="text-accent font-medium">× {participant.quantity}</span>
+                                        <span className="text-accent font-medium whitespace-nowrap">× {participant.quantity}</span>
                                     </div>
                                 ))}
                             </Card>
@@ -326,26 +371,29 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                             <Card className="bg-card/50 backdrop-blur border-border p-4 space-y-3">
                                 <h3 className="text-lg font-semibold text-foreground">Quantity</h3>
                                 <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2 p-1 border rounded-xl w-fit bg-secondary/30">
+                                    <div className="flex items-center gap-2 p-1 border rounded-xl w-fit bg-secondary/30 opacity-60">
                                         <button
-                                            onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                            disabled={quantity <= 1}
-                                            className="p-2 hover:bg-background rounded-lg transition-colors disabled:opacity-50"
+                                            disabled
+                                            className="p-2 rounded-lg transition-colors cursor-not-allowed opacity-50"
                                         >
                                             <Minus className="w-4 h-4" />
                                         </button>
-                                        <span className="w-8 text-center font-semibold text-lg">{quantity}</span>
+                                        <span className="w-8 text-center font-semibold text-lg">1</span>
                                         <button
-                                            onClick={() => setQuantity(Math.min(session.product.stock || 100, quantity + 1))}
-                                            disabled={quantity >= (session.product.stock || 100)}
-                                            className="p-2 hover:bg-background rounded-lg transition-colors disabled:opacity-50"
+                                            disabled
+                                            className="p-2 rounded-lg transition-colors cursor-not-allowed opacity-50"
                                         >
                                             <Plus className="w-4 h-4" />
                                         </button>
                                     </div>
-                                    <span className="text-sm text-muted-foreground">
-                                        {session.product.stock ? `${session.product.stock} available` : 'In Stock'}
-                                    </span>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-foreground font-medium">
+                                            Limit: 1 per user
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {session.product.stock ? `${session.product.stock} available` : 'In Stock'}
+                                        </span>
+                                    </div>
                                 </div>
                             </Card>
 
@@ -362,12 +410,14 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                             Rp. {(session.product.originalPrice * quantity).toLocaleString("id-ID")}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Group Discount</span>
-                                        <span className="text-red-500">
-                                            - Rp. {((session.product.originalPrice - session.product.discountedPrice) * quantity).toLocaleString("id-ID")}
-                                        </span>
-                                    </div>
+                                    {session.product.originalPrice > session.product.discountedPrice && (
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Group Discount</span>
+                                            <span className="text-red-500">
+                                                - Rp. {((session.product.originalPrice - session.product.discountedPrice) * quantity).toLocaleString("id-ID")}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Delivery Charges</span>
                                         <span className="text-foreground">
@@ -381,19 +431,35 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                 </div>
                             </Card>
 
-                            {/* Place Order Button */}
+                            {/* Place Order - Desktop Button */}
                             <Button
-                                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+                                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground hidden md:flex"
                                 onClick={() => setCurrentStep("payment")}
                             >
                                 Place Order →
                             </Button>
                         </div>
+
+                        {/* Mobile Sticky Bottom Bar */}
+                        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border md:hidden z-50 safe-area-bottom">
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-muted-foreground">Total Payment</span>
+                                    <span className="text-lg font-bold text-accent">Rp. {totalAmount.toLocaleString("id-ID")}</span>
+                                </div>
+                                <Button
+                                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
+                                    onClick={() => setCurrentStep("payment")}
+                                >
+                                    Place Order →
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {currentStep === "payment" && (
-                    <div className="max-w-2xl mx-auto">
+                    <div className="max-w-2xl mx-auto pb-24 md:pb-0">
                         <Card className="bg-card/50 backdrop-blur border-border p-6 space-y-6">
                             <h2 className="text-2xl font-semibold text-foreground">Payment</h2>
                             <div className="space-y-4">
@@ -427,13 +493,23 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                     </div>
                                 </div>
                                 <Button
-                                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+                                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground hidden md:flex"
                                     onClick={() => setCurrentStep("success")}
                                 >
                                     Confirm Payment
                                 </Button>
                             </div>
                         </Card>
+
+                        {/* Mobile Sticky Bottom Bar for Payment */}
+                        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border md:hidden z-50 safe-area-bottom">
+                            <Button
+                                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
+                                onClick={() => setCurrentStep("success")}
+                            >
+                                Confirm Payment
+                            </Button>
+                        </div>
                     </div>
                 )}
 
