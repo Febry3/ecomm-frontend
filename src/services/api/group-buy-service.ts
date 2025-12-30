@@ -155,84 +155,85 @@ export function useChangeGroupBuySessionStatus() {
 }
 
 
-export async function getGroupBuySession(id: string, token?: string) {
-    // Mock Data Implementation
-    return new Promise<GroupBuySession>((resolve) => {
-        setTimeout(() => {
-            resolve({
-                id: "1",
-                session_code: "g7JekL0d",
-                product_variant_id: "variant-1",
-                seller_id: 1,
-                min_participants: 1,
-                max_participants: 10,
-                current_participants: 5,
-                max_quantity: 100,
-                status: "active",
-                expires_at: new Date().toISOString(),
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                product_variant: {
-                    id: "variant-1",
-                    product_id: "product-1",
-                    sku: "KEY-FAN-MAX",
-                    name: "Keyboard Gaming Fantech MAXFIT",
-                    price: 427350,
-                    is_active: true,
-                    product: {
-                        id: "product-1",
-                        title: "Keyboard Gaming Fantech MAXFIT",
-                        product_images: [
-                            {
-                                id: "img-1",
-                                product_id: "product-1",
-                                image_url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=1000&auto=format&fit=crop",
-                                created_at: new Date().toISOString()
-                            }
-                        ]
-                    }
-                },
-                seller: {
-                    id: 1,
-                    user_id: 1,
-                    store_name: "Fantech Official",
-                    store_slug: "fantech-official",
-                    description: "Official Fantech Store",
-                    logo_url: "",
-                    business_email: "support@fantech.id",
-                    business_phone: "08123456789",
-                    status: "active",
-                    is_verified: true,
-                    average_rating: 4.8,
-                    total_sales: 1000,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                },
-                group_buy_tiers: [
-                    {
-                        id: "tier-1",
-                        group_buy_session_id: "1",
-                        participant_threshold: 5,
-                        discount_percentage: 10
-                    }
-                ]
-            } as GroupBuySession);
-        }, 100);
+
+export interface GroupBuySessionDetailsResponse {
+    buyer_group_session: {
+        id: string;
+        session_id: string;
+        session_code: string;
+        organizer_user_id: number;
+        product_variant_id: string;
+        title: string;
+        current_participants: number;
+        status: string;
+        expires_at: string;
+        created_at: string;
+        updated_at: string;
+    };
+    address: {
+        address_id: string;
+        user_id: number;
+        address_label: string;
+        receiver_name: string;
+        street_address: string;
+        village: string;
+        district: string;
+        city: string;
+        province: string;
+        postal_code: string;
+        notes: string;
+        is_default: boolean;
+        created_at: string;
+        updated_at: string;
+    }[];
+    product_variant: {
+        id: string;
+        product_id: string;
+        sku: string;
+        name: string;
+        price: number;
+        is_active: boolean;
+        stock: {
+            product_variant_id: string;
+            current_stock: number;
+            reserved_stock: number;
+            low_stock_threshold: number;
+            version: number;
+            last_updated: string;
+        };
+    };
+    product_session: {
+        id: string;
+        product_variant_id: string;
+        seller_id: number;
+        min_participants: number;
+        max_participants: number;
+        status: string;
+        expires_at: string;
+        group_buy_tiers: GroupBuyTierResponse[] | null;
+    };
+}
+
+export async function getGroupBuySession(sessionCode: string, token?: string) {
+    const response = await apiClient.get<{ data: GroupBuySessionDetailsResponse }>(`/group-buy/${sessionCode}`);
+    return response.data.data;
+}
+
+export function useGetGroupBuySession(sessionCode: string) {
+    return useQuery({
+        queryKey: ["group-buy-session", sessionCode],
+        queryFn: () => getGroupBuySession(sessionCode),
+        enabled: !!sessionCode,
     });
 }
 
-
 export async function getSessionIdByCode(code: string): Promise<string | null> {
-    // Mock Data Implementation
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            if (code === "g7JekL0d") {
-                resolve("1");
-            } else {
-                resolve(null);
-            }
-        }, 1000);
-    });
+    try {
+        const response = await apiClient.get<{ data: GroupBuySessionDetailsResponse }>(`/group-buy/${code}`);
+        return response.data.data ? response.data.data.buyer_group_session.session_code : null;
+    } catch {
+        return null;
+    }
 }
 
 

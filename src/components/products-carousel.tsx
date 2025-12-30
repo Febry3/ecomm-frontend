@@ -8,7 +8,7 @@ interface ProductImage {
     id: string;
     product_id: string;
     image_url: string;
-    alt_text: string;
+    alt_text?: string;
     display_order?: number;
     created_at: string;
 }

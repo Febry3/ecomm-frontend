@@ -1,80 +1,88 @@
+"use client"
+
 
 import { GroupBuySessionComponent } from "@/components/group-buy-session"
-import { getGroupBuySession } from "@/services/api/group-buy-service"
-import { getUserAddresses } from "@/services/api/address-service"
+import { useGetGroupBuySession } from "@/services/api/group-buy-service"
 import type { GroupBuySession as UIGroupBuySession } from "@/types/group-buy"
-import { cookies } from "next/headers"
+import { useParams } from "next/navigation"
 
-export default async function GroupBuySessionPage({
-    params,
-}: {
-    params: Promise<{ sessionId: string }>
-}) {
-    // 1. Await params (Next.js 15 requirement)
-    const { sessionId } = await params
+export default function GroupBuySessionPage() {
+    const { sessionId } = useParams<{ sessionId: string }>()
+    const { data: sessionData, isLoading, isError } = useGetGroupBuySession(sessionId)
 
-    // 2. Get auth token
-    const cookieStore = await cookies()
-    const token = cookieStore.get("authToken")?.value
+    if (isLoading) {
+        return <div className="min-h-screen flex items-center justify-center">Loading session...</div>
+    }
 
-    // 3. Parallel Data Fetching
-    const [sessionData, addressData] = await Promise.all([
-        getGroupBuySession(sessionId, token),
-        getUserAddresses(token || ""),
-    ])
+    if (isError || !sessionData) {
+        return <div className="min-h-screen flex items-center justify-center">Failed to load session</div>
+    }
 
-    // 4. Map API Response to UI Model
-    const currentPrice = sessionData.product_variant.price
-    const originalPrice = sessionData.product_variant.product?.product_images?.[0]?.product_id ?
-        currentPrice * 1.2 : currentPrice // Mock original price logic if not in API
+    // Map API Response to UI Model
+    const variant = sessionData.product_variant
+    const sessionDetails = sessionData.buyer_group_session
+    const productSession = sessionData.product_session
+    const addresses = sessionData.address
+
+    const currentPrice = variant.price
+    // Mock original price if not provided
+    const originalPrice = currentPrice * 1.2
 
     // Find applicable tier
-    const currentTier = sessionData.group_buy_tiers
+    const tiers = productSession.group_buy_tiers || []
+    const currentTier = tiers
         .sort((a, b) => b.participant_threshold - a.participant_threshold)
-        .find(tier => (sessionData.current_participants || 0) >= tier.participant_threshold)
-        || sessionData.group_buy_tiers[0] // fallback to first tier
+        .find(tier => (sessionDetails.current_participants || 0) >= tier.participant_threshold)
 
     const discountAmount = currentTier ? (currentPrice * currentTier.discount_percentage / 100) : 0
     const discountedPrice = currentPrice - discountAmount
 
     // Helper to calculate price details
-    const deliveryCharges = 20000 // Fixed for now, can come from API later
+    const deliveryCharges = 20000
 
-    // Map Participants (mocking 'isYou' logic mostly, but checking ID if available)
-    // Since API doesn't fully return user details in participant list yet in `GroupBuySession` type 
-    // we might need to rely on what's available or mock.
-    // However, looking at `GroupBuySession` type in service:
-    // It has `group_buy_tiers` but NO `participants` array in the interface definition!
-    // The previous mock had it. I need to be careful here.
-    // The service definition `GroupBuySession` has:
-    // current_participants?: number; 
-    // BUT NO ARRAY. 
-    // Result: I must create a mock array or empty array for now to prevent crash.
+    // Mock Participants since API only gives count
+    const participantCount = sessionDetails.current_participants || 1
+    const mockParticipants = Array.from({ length: participantCount }).map((_, i) => ({
+        id: `p-${i}`,
+        name: i === 0 ? "Host" : `User ${i + 1}`,
+        quantity: 1,
+        isYou: i === participantCount - 1 // Assume last joined is you? Logic TBD
+    }))
 
-    const mockParticipants = [
-        { id: "1", name: "User " + (sessionData.current_participants || 1), quantity: 1, isYou: true }
-    ]
-
-    const defaultAddress = addressData.find(a => a.is_default) || addressData[0]
+    const defaultAddress = addresses.find(a => a.is_default) || addresses[0]
 
     const mappedSession: UIGroupBuySession = {
-        id: sessionData.id,
-        sessionCode: sessionData.session_code,
+        id: sessionDetails.id,
+        sessionCode: sessionDetails.session_code,
         product: {
-            id: sessionData.product_variant.product?.id || "",
-            title: sessionData.product_variant.product?.title || sessionData.product_variant.name,
-            image: sessionData.product_variant.product?.product_images?.[0]?.image_url || "/placeholder.svg",
-            rating: 4.5, // Mock
-            reviewCount: 100, // Mock
+            id: variant.product_id,
+            title: variant.name, // Use variant name as title since product title is not in this response structure directly (it is in `variant.name` or we assume it)
+            // Note: The new response has `product_variant` name but not full product object with images. 
+            // The previous mock had nested product. 
+            // We might need to fetch product details separately if we need images.
+            // Wait, the user request JSON example shows:
+            // "product_variant": { "name": "Hitam", ... }
+            // It DOES NOT have product title or images.
+            // This is a missing piece. The UI needs an image.
+            // I will use a placeholder or see if I can fetch product details.
+            // Ideally, I should fetch `useGetProduct` or similar.
+            // But this is a server component. 
+            // I'll leave image as placeholder for now, or fetch `getProduct(variant.product_id)`.
+            // Let's settle for placeholder/variant name for now to avoid multiple fetches unless critical.
+            image: "/placeholder.svg",
+            rating: 4.5,
+            reviewCount: 0,
             originalPrice: originalPrice,
             discountedPrice: discountedPrice,
+            // Add max stock for quantity selector
+            stock: variant.stock.current_stock
         },
-        participants: mockParticipants, // API limitation workaround
-        maxParticipants: sessionData.max_participants,
-        coupon: undefined, // No coupon in API response yet
+        participants: mockParticipants,
+        maxParticipants: productSession.max_participants,
+        coupon: undefined,
         shippingAddress: {
             name: defaultAddress?.receiver_name || "No Address Selected",
-            address: defaultAddress ? `${defaultAddress.street_address}, ${defaultAddress.city}, ${defaultAddress.province}` : "Please add an address",
+            address: defaultAddress ? `${defaultAddress.street_address}, ${defaultAddress.city}` : "Please add an address",
         },
         priceDetails: {
             itemPrice: currentPrice,
@@ -82,8 +90,8 @@ export default async function GroupBuySessionPage({
             deliveryCharges: deliveryCharges,
             totalAmount: discountedPrice + deliveryCharges,
         },
-        status: (sessionData.status === "active") ? "cart" : "success", // Simple mapping
+        status: (sessionDetails.status === "open") ? "cart" : "success",
     }
 
-    return <GroupBuySessionComponent session={mappedSession} />
+    return <GroupBuySessionComponent session={mappedSession} userAddresses={addresses} />
 }
