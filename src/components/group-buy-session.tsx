@@ -1,12 +1,14 @@
 "use client"
 
+import { QRCodeSVG } from "qrcode.react"
+
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Star, ChevronDown, X, Copy, Check, Minus, Plus } from "lucide-react"
+import { Star, ChevronDown, X, Copy, Check, Minus, Plus, QrCode } from "lucide-react"
 import type { GroupBuySession } from "@/types/group-buy"
 import type { Address } from "@/types/address"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -23,6 +25,13 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
     const [showAllParticipants, setShowAllParticipants] = useState(false)
     const [couponCode, setCouponCode] = useState("")
     const [copiedLink, setCopiedLink] = useState(false)
+    const [shareLink, setShareLink] = useState("")
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            setShareLink(`${window.location.origin}/group-buy/join/${session.sessionCode}`)
+        }
+    }, [session.sessionCode])
 
     // Initialize quantity from user's participant entry if they have joined
     const userParticipant = session.participants.find(p => p.isYou)
@@ -47,8 +56,8 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
     const totalAmount = itemTotal + session.priceDetails.deliveryCharges
 
     const handleCopyInviteLink = () => {
-        const link = `${window.location.origin}/group-buy/join/${session.sessionCode}`
-        navigator.clipboard.writeText(link)
+        if (!shareLink) return
+        navigator.clipboard.writeText(shareLink)
         setCopiedLink(true)
         setTimeout(() => setCopiedLink(false), 2000)
     }
@@ -188,19 +197,41 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-semibold text-foreground">Group Buying #{session.sessionCode}</h2>
                                 {session.isOrganizer && (
-                                    <Button variant="outline" size="sm" onClick={handleCopyInviteLink} className="gap-2 bg-transparent">
-                                        {copiedLink ? (
-                                            <>
-                                                <Check className="w-4 h-4" />
-                                                Copied!
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Copy className="w-4 h-4" />
-                                                Invite Friends
-                                            </>
-                                        )}
-                                    </Button>
+                                    <div className="flex gap-2">
+                                        <Dialog>
+                                            <DialogTrigger asChild>
+                                                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                                                    <QrCode className="w-4 h-4" />
+                                                    Show QR
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6">
+                                                <DialogHeader>
+                                                    <DialogTitle className="text-center">Scan to Join Group Buy</DialogTitle>
+                                                </DialogHeader>
+                                                <div className="p-6 bg-white rounded-xl shadow-sm border mt-4">
+                                                    {shareLink && <QRCodeSVG value={shareLink} size={200} />}
+                                                </div>
+                                                <p className="text-sm text-muted-foreground text-center mt-4">
+                                                    Share this QR code with your friends so they can join instantly!
+                                                </p>
+                                            </DialogContent>
+                                        </Dialog>
+
+                                        <Button variant="outline" size="sm" onClick={handleCopyInviteLink} className="gap-2 bg-transparent">
+                                            {copiedLink ? (
+                                                <>
+                                                    <Check className="w-4 h-4" />
+                                                    Copied!
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Copy className="w-4 h-4" />
+                                                    Invite Friends
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
                                 )}
                             </div>
 
