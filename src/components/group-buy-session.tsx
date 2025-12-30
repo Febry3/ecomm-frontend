@@ -191,16 +191,16 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
 
                 {/* Main Content Grid */}
                 {currentStep === "cart" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-24 md:pb-0">
                         {/* Left Column - Participants */}
                         <div className="lg:col-span-2 space-y-4">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <h2 className="text-xl font-semibold text-foreground">Group Buying #{session.sessionCode}</h2>
                                 {session.isOrganizer && (
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 w-full sm:w-auto">
                                         <Dialog>
                                             <DialogTrigger asChild>
-                                                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                                                <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 bg-transparent">
                                                     <QrCode className="w-4 h-4" />
                                                     Show QR
                                                 </Button>
@@ -218,7 +218,7 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                             </DialogContent>
                                         </Dialog>
 
-                                        <Button variant="outline" size="sm" onClick={handleCopyInviteLink} className="gap-2 bg-transparent">
+                                        <Button variant="outline" size="sm" onClick={handleCopyInviteLink} className="flex-1 sm:flex-none gap-2 bg-transparent">
                                             {copiedLink ? (
                                                 <>
                                                     <Check className="w-4 h-4" />
@@ -242,7 +242,7 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                         className="flex items-center justify-between p-4 hover:bg-accent/5 transition-colors"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-lg font-semibold">
+                                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-lg font-semibold flex-shrink-0">
                                                 {participant.avatar ? (
                                                     <Image
                                                         src={participant.avatar || "/placeholder.svg"}
@@ -255,16 +255,18 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                                     participant.name.charAt(0).toUpperCase()
                                                 )}
                                             </div>
-                                            <div>
-                                                <span className="text-foreground font-medium">{participant.name}</span>
-                                                {participant.isYou && (
-                                                    <Badge variant="secondary" className="ml-2 h-5 text-[10px] px-1.5 bg-accent/20 text-accent hover:bg-accent/30 border-0">
-                                                        You
-                                                    </Badge>
-                                                )}
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-foreground font-medium truncate max-w-[120px] sm:max-w-[200px]">{participant.name}</span>
+                                                    {participant.isYou && (
+                                                        <Badge variant="secondary" className="h-5 text-[10px] px-1.5 bg-accent/20 text-accent hover:bg-accent/30 border-0 flex-shrink-0">
+                                                            You
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                        <span className="text-accent font-medium">× {participant.quantity}</span>
+                                        <span className="text-accent font-medium whitespace-nowrap">× {participant.quantity}</span>
                                     </div>
                                 ))}
                             </Card>
@@ -429,19 +431,35 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                 </div>
                             </Card>
 
-                            {/* Place Order Button */}
+                            {/* Place Order - Desktop Button */}
                             <Button
-                                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+                                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground hidden md:flex"
                                 onClick={() => setCurrentStep("payment")}
                             >
                                 Place Order →
                             </Button>
                         </div>
+
+                        {/* Mobile Sticky Bottom Bar */}
+                        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border md:hidden z-50 safe-area-bottom">
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-muted-foreground">Total Payment</span>
+                                    <span className="text-lg font-bold text-accent">Rp. {totalAmount.toLocaleString("id-ID")}</span>
+                                </div>
+                                <Button
+                                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
+                                    onClick={() => setCurrentStep("payment")}
+                                >
+                                    Place Order →
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {currentStep === "payment" && (
-                    <div className="max-w-2xl mx-auto">
+                    <div className="max-w-2xl mx-auto pb-24 md:pb-0">
                         <Card className="bg-card/50 backdrop-blur border-border p-6 space-y-6">
                             <h2 className="text-2xl font-semibold text-foreground">Payment</h2>
                             <div className="space-y-4">
@@ -475,13 +493,23 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                     </div>
                                 </div>
                                 <Button
-                                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+                                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground hidden md:flex"
                                     onClick={() => setCurrentStep("success")}
                                 >
                                     Confirm Payment
                                 </Button>
                             </div>
                         </Card>
+
+                        {/* Mobile Sticky Bottom Bar for Payment */}
+                        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border md:hidden z-50 safe-area-bottom">
+                            <Button
+                                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
+                                onClick={() => setCurrentStep("success")}
+                            >
+                                Confirm Payment
+                            </Button>
+                        </div>
                     </div>
                 )}
 
