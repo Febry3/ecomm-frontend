@@ -1,25 +1,46 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Star, ChevronDown, X, Copy, Check } from "lucide-react"
+import { Star, ChevronDown, X, Copy, Check, Minus, Plus } from "lucide-react"
 import type { GroupBuySession } from "@/types/group-buy"
+import type { Address } from "@/types/address"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
 
 interface GroupBuySessionProps {
     session: GroupBuySession
+    userAddresses: Address[]
 }
 
-export function GroupBuySessionComponent({ session }: GroupBuySessionProps) {
+export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySessionProps) {
     const [currentStep, setCurrentStep] = useState<"cart" | "payment" | "success">(session.status)
     const [showAllParticipants, setShowAllParticipants] = useState(false)
     const [couponCode, setCouponCode] = useState("")
     const [copiedLink, setCopiedLink] = useState(false)
+    const [quantity, setQuantity] = useState(1)
 
-    const displayedParticipants = showAllParticipants ? session.participants : session.participants.slice(0, 5)
+    // Address State
+    const [selectedAddress, setSelectedAddress] = useState<Address | null>(
+        userAddresses.find(a => a.is_default) || userAddresses[0] || null
+    )
+    const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false)
+
+    // Derived Participants with Dynamic Quantity for "You"
+    const currentParticipants = session.participants.map(p =>
+        p.isYou ? { ...p, quantity: quantity } : p
+    )
+
+    const displayedParticipants = showAllParticipants ? currentParticipants : currentParticipants.slice(0, 5)
+
+    // Derived Price Calculations
+    const itemTotal = session.product.discountedPrice * quantity
+    const totalAmount = itemTotal + session.priceDetails.deliveryCharges
 
     const handleCopyInviteLink = () => {
         const link = `${window.location.origin}/group-buy/join/${session.sessionCode}`
@@ -249,12 +270,83 @@ export function GroupBuySessionComponent({ session }: GroupBuySessionProps) {
                             <Card className="bg-card/50 backdrop-blur border-border p-4 space-y-3">
                                 <h3 className="text-lg font-semibold text-foreground">Shipped to (You)</h3>
                                 <div className="space-y-1 text-sm">
-                                    <p className="text-foreground font-medium">{session.shippingAddress.name}</p>
-                                    <p className="text-muted-foreground">{session.shippingAddress.address}</p>
+                                    {selectedAddress ? (
+                                        <>
+                                            <p className="text-foreground font-medium">{selectedAddress.receiver_name} ({selectedAddress.address_label})</p>
+                                            <p className="text-muted-foreground">{selectedAddress.street_address}, {selectedAddress.city}</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-muted-foreground">No address selected</p>
+                                    )}
                                 </div>
-                                <Button variant="link" className="text-accent p-0 h-auto font-normal">
-                                    Change Address
-                                </Button>
+                                <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="link" className="text-accent p-0 h-auto font-normal">
+                                            Change Address
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-[425px]">
+                                        <DialogHeader>
+                                            <DialogTitle>Select Shipping Address</DialogTitle>
+                                        </DialogHeader>
+                                        <RadioGroup
+                                            value={selectedAddress?.address_id}
+                                            onValueChange={(value: any) => {
+                                                const addr = userAddresses.find(a => a.address_id === value)
+                                                if (addr) {
+                                                    setSelectedAddress(addr)
+                                                    setIsAddressDialogOpen(false)
+                                                }
+                                            }}
+                                            className="gap-4 py-4"
+                                        >
+                                            {userAddresses.map((addr) => (
+                                                <div key={addr.address_id} className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-accent/5">
+                                                    <RadioGroupItem value={addr.address_id} id={addr.address_id} />
+                                                    <Label htmlFor={addr.address_id} className="flex-1 cursor-pointer">
+                                                        <div className="font-medium">{addr.address_label} - {addr.receiver_name}</div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {addr.street_address}, {addr.city}
+                                                        </div>
+                                                        {addr.is_default && <Badge variant="secondary" className="mt-1 text-xs">Default</Badge>}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </RadioGroup>
+                                        <div className="flex justify-end">
+                                            <Button variant="outline" className="w-full" onClick={() => window.open("/profile/addresses", "_blank")}>
+                                                Manage Addresses
+                                            </Button>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+                            </Card>
+
+                            {/* Quantity Selector */}
+                            <Card className="bg-card/50 backdrop-blur border-border p-4 space-y-3">
+                                <h3 className="text-lg font-semibold text-foreground">Quantity</h3>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 p-1 border rounded-xl w-fit bg-secondary/30">
+                                        <button
+                                            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                            disabled={quantity <= 1}
+                                            className="p-2 hover:bg-background rounded-lg transition-colors disabled:opacity-50"
+                                        >
+                                            <Minus className="w-4 h-4" />
+                                        </button>
+                                        <span className="w-8 text-center font-semibold text-lg">{quantity}</span>
+                                        <button
+                                            onClick={() => setQuantity(Math.min(session.product.stock || 100, quantity + 1))}
+                                            disabled={quantity >= (session.product.stock || 100)}
+                                            className="p-2 hover:bg-background rounded-lg transition-colors disabled:opacity-50"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <span className="text-sm text-muted-foreground">
+                                        {session.product.stock ? `${session.product.stock} available` : 'In Stock'}
+                                    </span>
+                                </div>
                             </Card>
 
                             {/* Price Details */}
@@ -262,18 +354,18 @@ export function GroupBuySessionComponent({ session }: GroupBuySessionProps) {
                                 <h3 className="text-lg font-semibold text-foreground">Price Details</h3>
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">1 Item</span>
+                                        <span className="text-muted-foreground">{quantity} Item{quantity > 1 ? 's' : ''}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">1x Keyboard Gaming Fantech MAXFIT</span>
+                                        <span className="text-muted-foreground">{quantity}x {session.product.title}</span>
                                         <span className="text-foreground">
-                                            Rp. {session.priceDetails.itemPrice.toLocaleString("id-ID")}
+                                            Rp. {(session.product.originalPrice * quantity).toLocaleString("id-ID")}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Group Discount</span>
                                         <span className="text-red-500">
-                                            - Rp. {session.priceDetails.groupDiscount.toLocaleString("id-ID")}
+                                            - Rp. {((session.product.originalPrice - session.product.discountedPrice) * quantity).toLocaleString("id-ID")}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
@@ -284,7 +376,7 @@ export function GroupBuySessionComponent({ session }: GroupBuySessionProps) {
                                     </div>
                                     <div className="border-t border-border pt-2 flex justify-between font-semibold">
                                         <span className="text-foreground">TOTAL AMOUNT</span>
-                                        <span className="text-accent">Rp. {session.priceDetails.totalAmount.toLocaleString("id-ID")}</span>
+                                        <span className="text-accent">Rp. {totalAmount.toLocaleString("id-ID")}</span>
                                     </div>
                                 </div>
                             </Card>
@@ -308,7 +400,7 @@ export function GroupBuySessionComponent({ session }: GroupBuySessionProps) {
                                 <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
                                     <p className="text-foreground">Total Amount to Pay:</p>
                                     <p className="text-3xl font-bold text-accent">
-                                        Rp. {session.priceDetails.totalAmount.toLocaleString("id-ID")}
+                                        Rp. {totalAmount.toLocaleString("id-ID")}
                                     </p>
                                 </div>
                                 <div className="space-y-2">
@@ -363,9 +455,16 @@ export function GroupBuySessionComponent({ session }: GroupBuySessionProps) {
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Total Paid:</span>
                                     <span className="text-accent font-bold">
-                                        Rp. {session.priceDetails.totalAmount.toLocaleString("id-ID")}
+                                        Rp. {totalAmount.toLocaleString("id-ID")}
                                     </span>
                                 </div>
+                                {selectedAddress && (
+                                    <div className="flex flex-col mt-2 pt-2 border-t border-accent/20">
+                                        <span className="text-muted-foreground text-sm">Shipped to:</span>
+                                        <span className="text-foreground font-medium text-sm">{selectedAddress.receiver_name}</span>
+                                        <span className="text-muted-foreground text-xs">{selectedAddress.street_address}, {selectedAddress.city}</span>
+                                    </div>
+                                )}
                             </div>
                             <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">View Order Details</Button>
                         </Card>

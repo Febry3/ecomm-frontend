@@ -152,10 +152,10 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
                     return false
                 }
             }
-            // Check if max participants is greater than highest tier threshold
+
             const maxTierThreshold = Math.max(...discountTiers.map(t => t.minParticipants))
-            if (maxParticipants <= maxTierThreshold) {
-                toast.error(`Max participants must be greater than ${maxTierThreshold}`)
+            if (maxTierThreshold > maxQuantity) {
+                toast.error("Max participants cant be greater than max quantity")
                 return false
             }
             return true
@@ -178,7 +178,7 @@ export function CreateGroupBuyDialog({ open, onOpenChange, onSuccess }: CreateGr
             min_participants: Math.min(...discountTiers.map(t => t.minParticipants)),
             max_participants: maxParticipants,
             max_quantity: maxQuantity,
-            expires_at: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString(),
+            expires_at: new Date(Date.now() + expiresInDays * 1000 * 60 * 60 * 24).toISOString(),
             tiers: discountTiers.map(tier => ({
                 participant_threshold: tier.minParticipants,
                 discount_percentage: tier.discountPercentage

@@ -1,6 +1,6 @@
 import apiClient from "@/lib/api-client";
-import { ProductRequest, SellerProductsResponse } from "@/types/product";
-import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { ProductRequest, SellerProductsResponse, Product } from "@/types/product";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 
@@ -75,11 +75,8 @@ export function useUpdateProduct(id: string) {
         mutationFn: async ({ data, newImages, existingImageIds, primaryImageIndex }: UpdateProductWithImagesParams) => {
             const formData = new FormData();
 
-            // Append product data as JSON string
             formData.append("data", JSON.stringify(data));
             formData.append("primary_image_index", String(primaryImageIndex));
-
-            // Append existing image IDs (images to keep)
             formData.append("existing_image_ids", JSON.stringify(existingImageIds));
 
             // Only append new image files if there are any
@@ -140,18 +137,35 @@ export function useGetSellerProduct(id: string) {
     });
 }
 
-// Public products endpoint for homepage
+// Response type for the public products endpoint
+export interface ProductsResponse {
+    products: Product[];
+    has_more: boolean;
+    next_cursor?: string;
+}
+
 export function useGetProducts() {
-    return useQuery({
+    return useInfiniteQuery({
         queryKey: ["products"],
-        queryFn: async () => {
-            const response = await apiClient.get("/product");
+        queryFn: async ({ pageParam }: { pageParam?: string }) => {
+            const params: any = { limit: 10 };
+            if (pageParam) {
+                params.cursor = pageParam;
+            }
+            const response = await apiClient.get("/product", { params });
             return response.data.data;
+        },
+        initialPageParam: undefined as string | undefined,
+        getNextPageParam: (lastPage: ProductsResponse) => {
+            if (!lastPage.has_more || lastPage.products.length === 0) {
+                return undefined;
+            }
+            const lastProduct = lastPage.products[lastPage.products.length - 1];
+            return lastProduct.created_at;
         },
     });
 }
 
-// Public single product endpoint for product detail page
 export function useGetProduct(id: string) {
     return useQuery({
         queryKey: ["product", id],
@@ -160,5 +174,16 @@ export function useGetProduct(id: string) {
             return response.data.data;
         },
         enabled: !!id,
+    });
+}
+
+export function useGetProductVariant(variantId: string) {
+    return useQuery({
+        queryKey: ["product-variant", variantId],
+        queryFn: async () => {
+            const response = await apiClient.get<{ data: any }>(`/product/variants/${variantId}`);
+            return response.data.data;
+        },
+        enabled: !!variantId,
     });
 }

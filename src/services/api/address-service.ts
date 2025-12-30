@@ -56,3 +56,23 @@ export function useUpdateUserAddress() {
         },
     });
 }
+
+export async function getUserAddresses(token: string) {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/address`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+        },
+        cache: "no-store",
+    });
+
+    if (!response.ok) {
+        // Return empty array if unauthorized or error, to avoid breaking the page
+        console.error(`Failed to fetch addresses: ${response.statusText}`);
+        return [];
+    }
+
+    const data = await response.json();
+    return data.data as Address[];
+}

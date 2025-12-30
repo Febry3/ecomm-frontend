@@ -17,6 +17,7 @@ export interface GroupBuySession {
         reviewCount: number
         originalPrice: number
         discountedPrice: number
+        stock?: number
     }
     participants: GroupBuyParticipant[]
     maxParticipants: number

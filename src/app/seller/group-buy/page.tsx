@@ -27,7 +27,6 @@ import {
     Search,
     MoreVertical,
     Copy,
-    Eye,
     XCircle,
     Users,
     TrendingUp,

@@ -36,7 +36,7 @@ export function AddressManagement() {
     const [addresses, setAddresses] = useState<Address[]>([])
     const { mutate: addUserAddress } = useAddUserAddress()
     // Assuming update mutation exists, if not I'll use the logic from before but cleaner
-    // const { mutate: updateUserAddress } = useUpdateUserAddress() 
+    const { mutate: updateUserAddress } = useUpdateUserAddress()
 
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingAddress, setEditingAddress] = useState<Address | null>(null)
@@ -117,7 +117,7 @@ export function AddressManagement() {
     const onSubmit = (data: AddressFormValues) => {
         if (editingAddress) {
             const updatedAddress = { ...editingAddress, ...data }
-            setAddresses(addresses.map((addr) => (addr.address_id === editingAddress.address_id ? updatedAddress : addr)))
+            updateUserAddress(updatedAddress)
             toast.success("Your address has been updated successfully.")
         } else {
             addUserAddress(data as any)
