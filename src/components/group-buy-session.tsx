@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Star, ChevronDown, X, Copy, Check, Minus, Plus, QrCode } from "lucide-react"
+import { Star, ChevronDown, X, Copy, Check, Minus, Plus, QrCode, Clock } from "lucide-react"
 import type { GroupBuySession } from "@/types/group-buy"
 import type { Address } from "@/types/address"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -26,6 +26,34 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
     const [couponCode, setCouponCode] = useState("")
     const [copiedLink, setCopiedLink] = useState(false)
     const [shareLink, setShareLink] = useState("")
+
+    // Countdown Timer State
+    const [timeLeft, setTimeLeft] = useState("")
+
+    useEffect(() => {
+        const calculateTimeLeft = () => {
+            const difference = +new Date(session.expiresAt) - +new Date()
+
+            if (difference > 0) {
+                const days = Math.floor(difference / (1000 * 60 * 60 * 24))
+                const hours = Math.floor((difference / (1000 * 60 * 60)) % 24)
+                const minutes = Math.floor((difference / 1000 / 60) % 60)
+                const seconds = Math.floor((difference / 1000) % 60)
+
+                return `${days > 0 ? `${days}d ` : ""}${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`
+            }
+            return "Expired"
+        }
+
+        // Initial calculation
+        setTimeLeft(calculateTimeLeft())
+
+        const timer = setInterval(() => {
+            setTimeLeft(calculateTimeLeft())
+        }, 1000)
+
+        return () => clearInterval(timer)
+    }, [session.expiresAt])
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -91,8 +119,13 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                         </div>
                         <div className="flex-1 space-y-3">
                             <h1 className="text-xl md:text-2xl font-semibold text-foreground">{session.product.title}</h1>
-                            <p className="text-sm text-muted-foreground">Keyboard Gaming 65% Fantech MAXFIT.</p>
-                            <p className="text-xs text-muted-foreground">Hotswap mechanical dengan Knob</p>
+                            <div
+                                className="text-sm text-muted-foreground line-clamp-2 [&>p]:m-0"
+                                dangerouslySetInnerHTML={{ __html: session.product.description || "" }}
+                            />
+                            {session.product.variantName && (
+                                <p className="text-xs text-muted-foreground">Variant: {session.product.variantName}</p>
+                            )}
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center">
                                     {[...Array(5)].map((_, i) => (
@@ -107,7 +140,7 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                 </div>
                                 <span className="text-xs text-muted-foreground">({session.product.reviewCount})</span>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 flex-wrap">
                                 {session.product.originalPrice > session.product.discountedPrice && (
                                     <span className="text-lg text-muted-foreground line-through">
                                         Rp. {session.product.originalPrice.toLocaleString("id-ID")}
@@ -119,6 +152,10 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                 <Badge variant="secondary" className="bg-accent/20 text-accent">
                                     {session.participants.length} People Joined
                                 </Badge>
+                                <div className="flex items-center gap-2 text-red-500 font-medium bg-red-500/10 px-3 py-1 rounded-full text-sm">
+                                    <Clock className="w-4 h-4" />
+                                    <span>{timeLeft}</span>
+                                </div>
                             </div>
                             <div className="flex items-center gap-2 text-sm">
                                 <span className="text-muted-foreground">Delivery Policy</span>

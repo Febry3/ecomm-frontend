@@ -159,7 +159,7 @@ export function useChangeGroupBuySessionStatus() {
 export interface GroupBuySessionDetailsResponse {
     buyer_group_session: {
         id: string;
-        session_id: string;
+        group_buy_session_id: string;
         session_code: string;
         organizer_user_id: number;
         product_variant_id: string;
@@ -215,6 +215,18 @@ export interface GroupBuySessionDetailsResponse {
             low_stock_threshold: number;
             version: number;
             last_updated: string;
+        };
+        product: {
+            id: string;
+            title: string;
+            description: string;
+            product_images: {
+                id: string;
+                product_id: string;
+                image_url: string;
+                alt_text: string;
+                created_at: string;
+            }[];
         };
     };
     product_session: {

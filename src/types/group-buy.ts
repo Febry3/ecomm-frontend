@@ -10,9 +10,12 @@ export interface GroupBuyParticipant {
 export interface GroupBuySession {
     id: string
     sessionCode: string
+    expiresAt: string
     product: {
         id: string
         title: string
+        variantName?: string
+        description?: string
         image: string
         rating: number
         reviewCount: number

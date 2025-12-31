@@ -84,11 +84,13 @@ export default function GroupBuySessionPage() {
     const mappedSession: UIGroupBuySession = {
         id: sessionDetails.id,
         sessionCode: sessionDetails.session_code,
+        expiresAt: sessionDetails.expires_at,
         product: {
             id: variant.product_id,
-            title: variant.name,
-            // Fallback image as API response excludes product images
-            image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop",
+            title: variant.product?.title || variant.name,
+            variantName: variant.name,
+            description: variant.product?.description,
+            image: variant.product?.product_images?.[0]?.image_url || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop",
             rating: 4.5,
             reviewCount: 0,
             originalPrice: originalPrice,
