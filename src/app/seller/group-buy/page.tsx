@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -33,6 +33,7 @@ import {
     Sparkles,
     CheckCircle2,
     AlertCircle,
+    Package,
 } from "lucide-react"
 
 export default function GroupBuyPage() {
@@ -49,8 +50,8 @@ export default function GroupBuyPage() {
         sessions.filter(
             (s) =>
                 s.status === status &&
-                (s.product_variant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    s.session_code.toLowerCase().includes(searchQuery.toLowerCase())),
+                ((s.product_variant?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (s.session_code || "").toLowerCase().includes(searchQuery.toLowerCase())),
         )
 
     const copyShareLink = (sessionCode: string) => {
@@ -85,8 +86,10 @@ export default function GroupBuyPage() {
 
     const SessionCard = ({ session }: { session: GroupBuySession }) => {
         const currentParticipants = session.current_participants || 0
-        const progress = (currentParticipants / session.max_participants) * 100
-        const minReached = currentParticipants >= session.min_participants
+        const maxLimit = session.max_quantity || session.max_participants || 0
+        const progress = maxLimit > 0 ? (currentParticipants / maxLimit) * 100 : 0
+        // minReached logic might still be relevant for tiers, but for the main progress bar we use max_quantity
+        // user asked to remove min and max participant display and use maxquantity
 
         // Get the highest applicable discount from tiers
         const getMaxDiscount = () => {
@@ -147,21 +150,20 @@ export default function GroupBuyPage() {
                                     )}
                                 </div>
                             </div>
-                            <div className="space-y-1.5">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground flex items-center gap-1">
-                                        <Users className="h-4 w-4" />
-                                        Participants
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1 p-2 rounded-md bg-white/5 border border-white/5">
+                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <Users className="h-3.5 w-3.5" />
+                                        Current Participant(s)
                                     </span>
-                                    <span className="font-medium">
-                                        {currentParticipants} / {session.max_participants}
-                                        {minReached && <CheckCircle2 className="h-4 w-4 inline ml-1 text-green-500" />}
-                                    </span>
+                                    <span className="text-base font-semibold text-foreground">{currentParticipants} <span className="text-xs text-muted-foreground font-normal">items</span></span>
                                 </div>
-                                <Progress value={progress} className="h-2" />
-                                <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span className={minReached ? "text-green-500" : ""}>Min: {session.min_participants}</span>
-                                    <span>Max: {session.max_participants}</span>
+                                <div className="flex flex-col gap-1 p-2 rounded-md bg-white/5 border border-white/5">
+                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <Package className="h-3.5 w-3.5" />
+                                        Max Quota
+                                    </span>
+                                    <span className="text-base font-semibold text-foreground">{maxLimit} <span className="text-xs text-muted-foreground font-normal">items</span></span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t border-white/10">

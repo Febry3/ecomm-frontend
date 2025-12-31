@@ -95,7 +95,7 @@ export interface GroupBuySession {
     min_participants: number;
     max_participants: number;
     current_participants?: number;
-    max_quantity: number;
+    max_quantity?: number;
     status: "active" | "completed" | "cancelled" | "expired";
     expires_at: string;
     created_at: string;
