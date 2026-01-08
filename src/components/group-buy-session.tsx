@@ -649,10 +649,10 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                             </div>
                             <div className="space-y-2">
                                 <h2 className="text-3xl font-bold text-foreground">
-                                    {displayOrder?.payment.status === "PAID" ? "Payment Successful!" : "Waiting for Payment"}
+                                    {(displayOrder?.payment.status === "PAID" || displayOrder?.payment.status === "settlement") ? "Payment Successful!" : "Waiting for Payment"}
                                 </h2>
                                 <p className="text-muted-foreground">
-                                    {displayOrder?.payment.status === "PAID"
+                                    {(displayOrder?.payment.status === "PAID" || displayOrder?.payment.status === "settlement")
                                         ? "Thank you! Your payment has been received."
                                         : "Your order has been placed. Please wait for the payment to be confirmed."}
                                 </p>
@@ -668,8 +668,11 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-sm text-muted-foreground">Status</p>
-                                                <Badge variant={displayOrder.payment.status === "PAID" ? "default" : "outline"} className={displayOrder.payment.status === "PAID" ? "bg-green-500 hover:bg-green-600" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"}>
-                                                    {displayOrder.payment.status === "PENDING" ? "Waiting Payment" : displayOrder.payment.status}
+                                                <Badge
+                                                    variant={(displayOrder.payment.status === "PAID" || displayOrder.payment.status === "settlement") ? "default" : "outline"}
+                                                    className={(displayOrder.payment.status === "PAID" || displayOrder.payment.status === "settlement") ? "bg-green-500 hover:bg-green-600" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"}
+                                                >
+                                                    {(displayOrder.payment.status === "PENDING" || displayOrder.payment.status === "pending") ? "Waiting Payment" : displayOrder.payment.status}
                                                 </Badge>
                                             </div>
                                         </div>
