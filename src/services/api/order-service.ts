@@ -95,3 +95,17 @@ export function useGetOrder(orderId: string) {
     });
 }
 
+export function useGetOrders() {
+    return useQuery<CreateOrderResponse[], Error>({
+        queryKey: ["orders"],
+        queryFn: async () => {
+            const response = await apiClient.get("/user/orders");
+            // Handle both direct array and paginated response { items: [], ... }
+            const data = response.data.data;
+            if (Array.isArray(data)) return data;
+            if (data && Array.isArray(data.items)) return data.items;
+            return []; // Fallback to empty array
+        },
+    });
+}
+
