@@ -80,6 +80,12 @@ export default function OrdersPage() {
                                                     <span className="text-xs text-muted-foreground">#{order.order_number}</span>
                                                     <span className="text-xs text-muted-foreground">•</span>
                                                     <span className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</span>
+                                                    {order.seller && (
+                                                        <>
+                                                            <span className="text-xs text-muted-foreground">•</span>
+                                                            <span className="text-xs font-medium text-foreground">{order.seller.shop_name}</span>
+                                                        </>
+                                                    )}
                                                 </div>
                                                 <h3 className="font-semibold text-foreground text-lg">{order.product.product_name}</h3>
                                                 {order.product.variant_name && (
@@ -87,16 +93,16 @@ export default function OrdersPage() {
                                                 )}
                                             </div>
                                             <Badge
-                                                variant={order.payment.status === "PAID" ? "default" : "outline"}
+                                                variant={order.status === "paid" ? "default" : "outline"}
                                                 className={
-                                                    order.payment.status === "PAID"
+                                                    order.status === "paid"
                                                         ? "bg-green-500 hover:bg-green-600 border-0"
-                                                        : order.payment.status === "PENDING"
+                                                        : order.status === "pending_payment"
                                                             ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
                                                             : "bg-red-500/10 text-red-500 border-red-500/20"
                                                 }
                                             >
-                                                {order.payment.status === "PENDING" ? "Waiting Payment" : order.payment.status}
+                                                {order.status === "pending_payment" ? "Waiting Payment" : order.status === "paid" ? "Paid" : order.status}
                                             </Badge>
                                         </div>
 
@@ -105,7 +111,7 @@ export default function OrdersPage() {
                                                 <p className="text-xs text-muted-foreground">Total Amount</p>
                                                 <p className="font-bold text-accent">Rp {order.total_amount.toLocaleString("id-ID")}</p>
                                             </div>
-                                            {order.payment.status === "PENDING" && (
+                                            {order.status === "pending_payment" && (
                                                 <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2" asChild>
                                                     <Link href={`/group-buy/${order.payment.id}?from=orders`}>
                                                         <span>Pay Now</span>
@@ -115,7 +121,7 @@ export default function OrdersPage() {
                                         </div>
 
                                         {/* Quick Payment Info for Pending */}
-                                        {order.payment.status === "PENDING" && (
+                                        {order.status === "pending_payment" && (
                                             <div className="bg-accent/5 rounded-md p-3 flex items-center justify-between border border-accent/10">
                                                 <div className="flex flex-col">
                                                     <span className="text-xs text-muted-foreground">Virtual Account ({order.payment.bank_code})</span>

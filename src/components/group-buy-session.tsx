@@ -101,8 +101,10 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
     const displayedParticipants = showAllParticipants ? currentParticipants : currentParticipants.slice(0, 5)
 
     // Derived Price Calculations
-    const itemTotal = session.product.discountedPrice * quantity
+    // Change to Cashback model: User pays Original Price
+    const itemTotal = session.product.originalPrice * quantity
     const totalAmount = itemTotal + session.priceDetails.deliveryCharges
+    const cashbackAmount = (session.product.originalPrice - session.product.discountedPrice) * quantity
 
     const handleCopyInviteLink = () => {
         if (!shareLink) return
@@ -138,6 +140,7 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
             buyer_group_session_id: session.id,
             address_id: selectedAddress.address_id,
             bank_code: selectedBank,
+            cashback: cashbackAmount
         }, {
             onSuccess: (data) => {
                 setOrderSuccess(data)
@@ -497,10 +500,10 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                         </span>
                                     </div>
                                     {session.product.originalPrice > session.product.discountedPrice && (
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Group Discount</span>
-                                            <span className="text-red-500">
-                                                - Rp. {((session.product.originalPrice - session.product.discountedPrice) * quantity).toLocaleString("id-ID")}
+                                        <div className="flex justify-between text-green-600 font-medium">
+                                            <span className="">Cashback Potential</span>
+                                            <span className="">
+                                                + Rp. {cashbackAmount.toLocaleString("id-ID")}
                                             </span>
                                         </div>
                                     )}

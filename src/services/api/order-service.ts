@@ -14,9 +14,10 @@ export interface CreateGroupBuyOrderPayload {
     buyer_group_session_id: string;
     address_id: string;
     bank_code: string;
+    cashback?: number;
 }
 
-export interface CreateOrderResponse {
+export interface Order {
     id: string;
     order_number: string;
     status: string;
@@ -32,6 +33,7 @@ export interface CreateOrderResponse {
         amount: number;
         status: string;
         expired_at: string;
+        paid_at?: string;
     };
     product: {
         product_id: string;
@@ -40,13 +42,17 @@ export interface CreateOrderResponse {
         variant_name: string;
         image_url: string;
     };
+    seller: {
+        id: number;
+        shop_name: string;
+    };
     created_at: string;
 }
 
-export function useCreateOrder() {
-    const queryClient = useQueryClient();
+export type CreateOrderResponse = Order; // Alias for backward compatibility if needed
 
-    return useMutation<CreateOrderResponse, Error, CreateOrderPayload>({
+export function useCreateOrder() {
+    return useMutation<Order, Error, CreateOrderPayload>({
         mutationFn: async (payload) => {
             const response = await apiClient.post("/user/orders", payload);
             return response.data.data;
@@ -65,7 +71,7 @@ export function useCreateOrder() {
 }
 
 export function useCreateGroupBuyOrder() {
-    return useMutation<CreateOrderResponse, Error, CreateGroupBuyOrderPayload>({
+    return useMutation<Order, Error, CreateGroupBuyOrderPayload>({
         mutationFn: async (payload) => {
             const response = await apiClient.post("/user/orders/group-buy", payload);
             return response.data.data;
@@ -84,7 +90,7 @@ export function useCreateGroupBuyOrder() {
 }
 
 export function useGetOrder(orderId: string) {
-    return useQuery<CreateOrderResponse, Error>({
+    return useQuery<Order, Error>({
         queryKey: ["order", orderId],
         queryFn: async () => {
             const response = await apiClient.get(`/user/orders/${orderId}`);
@@ -96,15 +102,20 @@ export function useGetOrder(orderId: string) {
 }
 
 export function useGetOrders() {
-    return useQuery<CreateOrderResponse[], Error>({
+    return useQuery<Order[], Error>({
         queryKey: ["orders"],
         queryFn: async () => {
             const response = await apiClient.get("/user/orders");
-            // Handle both direct array and paginated response { items: [], ... }
             const data = response.data.data;
+
+            // Handle new structure { orders: [...], ... }
+            if (data && Array.isArray(data.orders)) return data.orders;
+
+            // Handle legacy structures
             if (Array.isArray(data)) return data;
             if (data && Array.isArray(data.items)) return data.items;
-            return []; // Fallback to empty array
+
+            return [];
         },
     });
 }
