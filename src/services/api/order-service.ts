@@ -1,6 +1,6 @@
 
 import apiClient from "@/lib/api-client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export interface CreateOrderPayload {
@@ -82,3 +82,16 @@ export function useCreateGroupBuyOrder() {
         },
     });
 }
+
+export function useGetOrder(orderId: string) {
+    return useQuery<CreateOrderResponse, Error>({
+        queryKey: ["order", orderId],
+        queryFn: async () => {
+            const response = await apiClient.get(`/user/orders/${orderId}`);
+            return response.data.data;
+        },
+        enabled: !!orderId,
+        refetchInterval: 5000, // Poll every 5 seconds
+    });
+}
+

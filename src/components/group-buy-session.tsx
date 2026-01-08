@@ -14,7 +14,7 @@ import type { Address } from "@/types/address"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { useCreateGroupBuyOrder, CreateOrderResponse } from "@/services/api/order-service"
+import { useCreateGroupBuyOrder, useGetOrder, CreateOrderResponse } from "@/services/api/order-service"
 import { Building2, Wallet, CreditCard, CheckCircle2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -43,6 +43,10 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
     const [orderSuccess, setOrderSuccess] = useState<CreateOrderResponse | null>(null)
 
     const { mutate: createOrder, isPending: isOrderPending } = useCreateGroupBuyOrder()
+    const { data: latestOrder } = useGetOrder(orderSuccess?.id || "")
+
+    // Use latest order data if available, otherwise fallback to mutation response
+    const displayOrder = latestOrder || orderSuccess
 
     // Countdown Timer State
     const [timeLeft, setTimeLeft] = useState("")
@@ -641,31 +645,44 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                 <CheckCircle2 className="w-10 h-10 text-green-500" />
                             </div>
                             <div className="space-y-2">
-                                <h2 className="text-3xl font-bold text-foreground">Payment Successful!</h2>
-                                <p className="text-muted-foreground">Your order has been placed successfully. Please complete your payment.</p>
+                                <h2 className="text-3xl font-bold text-foreground">
+                                    {displayOrder?.payment.status === "PAID" ? "Payment Successful!" : "Waiting for Payment"}
+                                </h2>
+                                <p className="text-muted-foreground">
+                                    {displayOrder?.payment.status === "PAID"
+                                        ? "Thank you! Your payment has been received."
+                                        : "Your order has been placed. Please wait for the payment to be confirmed."}
+                                </p>
                             </div>
 
-                            {orderSuccess && (
+                            {displayOrder && (
                                 <>
                                     <div className="p-4 bg-accent/10 rounded-lg border border-accent/20 text-left space-y-4">
                                         <div className="flex justify-between items-center pb-4 border-b border-accent/20">
                                             <div>
                                                 <p className="text-sm text-muted-foreground">Bank</p>
-                                                <p className="font-semibold text-lg uppercase text-foreground">{orderSuccess.payment.bank_code}</p>
+                                                <p className="font-semibold text-lg uppercase text-foreground">{displayOrder.payment.bank_code}</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm text-muted-foreground">Total Amount</p>
-                                                <p className="font-bold text-xl text-accent">Rp {orderSuccess.total_amount.toLocaleString("id-ID")}</p>
+                                                <p className="text-sm text-muted-foreground">Status</p>
+                                                <Badge variant={displayOrder.payment.status === "PAID" ? "default" : "outline"} className={displayOrder.payment.status === "PAID" ? "bg-green-500 hover:bg-green-600" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"}>
+                                                    {displayOrder.payment.status === "PENDING" ? "Waiting Payment" : displayOrder.payment.status}
+                                                </Badge>
                                             </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-sm text-muted-foreground">Total Amount</p>
+                                            <p className="font-bold text-xl text-accent">Rp {displayOrder.total_amount.toLocaleString("id-ID")}</p>
                                         </div>
 
                                         <div className="space-y-2">
                                             <Label className="text-foreground">Virtual Account Number</Label>
                                             <div className="flex items-center gap-2">
                                                 <div className="flex-1 p-3 bg-muted/50 rounded-md font-mono text-lg font-medium tracking-wider text-foreground border border-border">
-                                                    {orderSuccess.payment.va_number}
+                                                    {displayOrder.payment.va_number}
                                                 </div>
-                                                <Button size="icon" variant="outline" onClick={() => handleCopyVa(orderSuccess.payment.va_number)}>
+                                                <Button size="icon" variant="outline" onClick={() => handleCopyVa(displayOrder.payment.va_number)}>
                                                     <Copy className="w-4 h-4" />
                                                 </Button>
                                             </div>
@@ -674,12 +691,12 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                         <div className="pt-2 space-y-2 text-sm">
                                             <div className="flex justify-between">
                                                 <span className="text-muted-foreground">Order ID</span>
-                                                <span className="text-foreground font-medium">#{orderSuccess.order_number}</span>
+                                                <span className="text-foreground font-medium">#{displayOrder.order_number}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-muted-foreground">Expires At</span>
                                                 <span className="text-red-400 font-medium">
-                                                    {new Date(orderSuccess.payment.expired_at).toLocaleString("id-ID")}
+                                                    {new Date(displayOrder.payment.expired_at).toLocaleString("id-ID")}
                                                 </span>
                                             </div>
                                         </div>
