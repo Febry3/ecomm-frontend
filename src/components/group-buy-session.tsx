@@ -14,6 +14,16 @@ import type { Address } from "@/types/address"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { useCreateGroupBuyOrder, CreateOrderResponse } from "@/services/api/order-service"
+import { Building2, Wallet, CreditCard, CheckCircle2, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+
+const BANK_OPTIONS = [
+    { code: "bca", name: "BCA", logo: "/banks/bca.png" },
+    { code: "bni", name: "BNI", logo: "/banks/bni.png" },
+    { code: "mandiri", name: "Mandiri", logo: "/banks/mandiri.png" },
+    { code: "permata", name: "Permata", logo: "/banks/permata.png" },
+]
 
 interface GroupBuySessionProps {
     session: GroupBuySession
@@ -26,6 +36,13 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
     const [couponCode, setCouponCode] = useState("")
     const [copiedLink, setCopiedLink] = useState(false)
     const [shareLink, setShareLink] = useState("")
+
+    // Payment State
+    const [paymentMethod, setPaymentMethod] = useState<string>("bank_transfer")
+    const [selectedBank, setSelectedBank] = useState<string>("")
+    const [orderSuccess, setOrderSuccess] = useState<CreateOrderResponse | null>(null)
+
+    const { mutate: createOrder, isPending: isOrderPending } = useCreateGroupBuyOrder()
 
     // Countdown Timer State
     const [timeLeft, setTimeLeft] = useState("")
@@ -101,6 +118,34 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
         } else if (step === "success" && currentStep === "success") {
             setCurrentStep("success")
         }
+    }
+
+    const handleConfirmPayment = () => {
+        if (!selectedAddress) {
+            toast.error("Please select a shipping address")
+            return
+        }
+        if (paymentMethod === "bank_transfer" && !selectedBank) {
+            toast.error("Please select a bank")
+            return
+        }
+
+        createOrder({
+            buyer_group_session_id: session.id,
+            address_id: selectedAddress.address_id,
+            bank_code: selectedBank,
+        }, {
+            onSuccess: (data) => {
+                setOrderSuccess(data)
+                setCurrentStep("success")
+                window.scrollTo(0, 0)
+            }
+        })
+    }
+
+    const handleCopyVa = (va: string) => {
+        navigator.clipboard.writeText(va)
+        toast.success("VA Number copied")
     }
 
     return (
@@ -508,78 +553,151 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
                                 </div>
                                 <div className="space-y-2">
                                     <p className="text-sm text-muted-foreground">Please select your payment method:</p>
-                                    <div className="grid grid-cols-1 gap-3">
-                                        <Button variant="outline" className="h-auto p-4 justify-start bg-transparent">
-                                            <div className="text-left">
-                                                <p className="font-medium text-foreground">Bank Transfer</p>
-                                                <p className="text-xs text-muted-foreground">Pay via bank transfer</p>
-                                            </div>
-                                        </Button>
-                                        <Button variant="outline" className="h-auto p-4 justify-start bg-transparent">
-                                            <div className="text-left">
-                                                <p className="font-medium text-foreground">E-Wallet</p>
-                                                <p className="text-xs text-muted-foreground">Pay with GoPay, OVO, DANA</p>
-                                            </div>
-                                        </Button>
-                                        <Button variant="outline" className="h-auto p-4 justify-start bg-transparent">
-                                            <div className="text-left">
-                                                <p className="font-medium text-foreground">Credit Card</p>
-                                                <p className="text-xs text-muted-foreground">Pay with credit/debit card</p>
-                                            </div>
-                                        </Button>
-                                    </div>
+                                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-1 gap-3">
+                                        <div>
+                                            <RadioGroupItem value="bank_transfer" id="bank_transfer" className="peer sr-only" />
+                                            <Label
+                                                htmlFor="bank_transfer"
+                                                className="flex items-center gap-4 rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-accent peer-data-[state=checked]:bg-accent/5 cursor-pointer"
+                                            >
+                                                <Building2 className="h-6 w-6" />
+                                                <div className="flex-1">
+                                                    <p className="font-medium text-foreground">Bank Transfer</p>
+                                                    <p className="text-xs text-muted-foreground">Pay via bank transfer</p>
+                                                </div>
+                                            </Label>
+                                        </div>
+                                        <div className="opacity-50 pointer-events-none">
+                                            <RadioGroupItem value="ewallet" id="ewallet" className="peer sr-only" />
+                                            <Label
+                                                htmlFor="ewallet"
+                                                className="flex items-center gap-4 rounded-md border-2 border-muted bg-transparent p-4 peer-data-[state=checked]:border-accent cursor-not-allowed"
+                                            >
+                                                <Wallet className="h-6 w-6" />
+                                                <div className="flex-1">
+                                                    <p className="font-medium text-foreground">E-Wallet</p>
+                                                    <p className="text-xs text-muted-foreground">Pay with GoPay, OVO, DANA (Coming Soon)</p>
+                                                </div>
+                                            </Label>
+                                        </div>
+                                        <div className="opacity-50 pointer-events-none">
+                                            <RadioGroupItem value="card" id="card" className="peer sr-only" />
+                                            <Label
+                                                htmlFor="card"
+                                                className="flex items-center gap-4 rounded-md border-2 border-muted bg-transparent p-4 peer-data-[state=checked]:border-accent cursor-not-allowed"
+                                            >
+                                                <CreditCard className="h-6 w-6" />
+                                                <div className="flex-1">
+                                                    <p className="font-medium text-foreground">Credit Card</p>
+                                                    <p className="text-xs text-muted-foreground">Pay with credit/debit card (Coming Soon)</p>
+                                                </div>
+                                            </Label>
+                                        </div>
+                                    </RadioGroup>
+
+                                    {paymentMethod === "bank_transfer" && (
+                                        <div className="space-y-4 pt-4 border-t border-border mt-4">
+                                            <Label className="text-base text-foreground">Select Bank</Label>
+                                            <RadioGroup value={selectedBank} onValueChange={setSelectedBank} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {BANK_OPTIONS.map((bank) => (
+                                                    <div key={bank.code} className="relative">
+                                                        <RadioGroupItem value={bank.code} id={bank.code} className="peer sr-only" />
+                                                        <Label
+                                                            htmlFor={bank.code}
+                                                            className="flex items-center justify-between rounded-md border border-muted bg-card/50 p-4 hover:bg-accent peer-data-[state=checked]:border-accent peer-data-[state=checked]:ring-1 peer-data-[state=checked]:ring-accent cursor-pointer"
+                                                        >
+                                                            <span className="font-semibold text-foreground">{bank.name}</span>
+                                                            <Building2 className="h-5 w-5 text-muted-foreground" />
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </RadioGroup>
+                                        </div>
+                                    )}
                                 </div>
                                 <Button
                                     className="w-full bg-accent hover:bg-accent/90 text-accent-foreground hidden md:flex"
-                                    onClick={() => setCurrentStep("success")}
+                                    onClick={handleConfirmPayment}
+                                    disabled={isOrderPending}
                                 >
-                                    Confirm Payment
+                                    {isOrderPending ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        "Confirm Payment"
+                                    )}
                                 </Button>
                             </div>
                         </Card>
-
-                        {/* Mobile Sticky Bottom Bar for Payment */}
-                        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border md:hidden z-50 safe-area-bottom">
-                            <Button
-                                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg"
-                                onClick={() => setCurrentStep("success")}
-                            >
-                                Confirm Payment
-                            </Button>
-                        </div>
                     </div>
                 )}
 
                 {currentStep === "success" && (
                     <div className="max-w-2xl mx-auto">
                         <Card className="bg-card/50 backdrop-blur border-border p-8 text-center space-y-6">
-                            <div className="w-20 h-20 mx-auto rounded-full bg-accent/20 flex items-center justify-center">
-                                <Check className="w-10 h-10 text-accent" />
+                            <div className="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
+                                <CheckCircle2 className="w-10 h-10 text-green-500" />
                             </div>
                             <div className="space-y-2">
                                 <h2 className="text-3xl font-bold text-foreground">Payment Successful!</h2>
-                                <p className="text-muted-foreground">Your order has been placed successfully.</p>
+                                <p className="text-muted-foreground">Your order has been placed successfully. Please complete your payment.</p>
                             </div>
-                            <div className="p-4 bg-accent/10 rounded-lg border border-accent/20 text-left space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Order ID:</span>
-                                    <span className="text-foreground font-medium">#{session.sessionCode}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Total Paid:</span>
-                                    <span className="text-accent font-bold">
-                                        Rp. {totalAmount.toLocaleString("id-ID")}
-                                    </span>
-                                </div>
-                                {selectedAddress && (
-                                    <div className="flex flex-col mt-2 pt-2 border-t border-accent/20">
-                                        <span className="text-muted-foreground text-sm">Shipped to:</span>
-                                        <span className="text-foreground font-medium text-sm">{selectedAddress.receiver_name}</span>
-                                        <span className="text-muted-foreground text-xs">{selectedAddress.street_address}, {selectedAddress.city}</span>
+
+                            {orderSuccess && (
+                                <>
+                                    <div className="p-4 bg-accent/10 rounded-lg border border-accent/20 text-left space-y-4">
+                                        <div className="flex justify-between items-center pb-4 border-b border-accent/20">
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">Bank</p>
+                                                <p className="font-semibold text-lg uppercase text-foreground">{orderSuccess.payment.bank_code}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm text-muted-foreground">Total Amount</p>
+                                                <p className="font-bold text-xl text-accent">Rp {orderSuccess.total_amount.toLocaleString("id-ID")}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label className="text-foreground">Virtual Account Number</Label>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 p-3 bg-muted/50 rounded-md font-mono text-lg font-medium tracking-wider text-foreground border border-border">
+                                                    {orderSuccess.payment.va_number}
+                                                </div>
+                                                <Button size="icon" variant="outline" onClick={() => handleCopyVa(orderSuccess.payment.va_number)}>
+                                                    <Copy className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2 space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Order ID</span>
+                                                <span className="text-foreground font-medium">#{orderSuccess.order_number}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Expires At</span>
+                                                <span className="text-red-400 font-medium">
+                                                    {new Date(orderSuccess.payment.expired_at).toLocaleString("id-ID")}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
-                            <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">View Order Details</Button>
+
+                                    {selectedAddress && (
+                                        <div className="p-4 bg-card/50 rounded-lg border border-border text-left">
+                                            <span className="text-muted-foreground text-sm block mb-1">Shipped to:</span>
+                                            <span className="text-foreground font-medium text-sm block">{selectedAddress.receiver_name}</span>
+                                            <span className="text-muted-foreground text-xs">{selectedAddress.street_address}, {selectedAddress.city}</span>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => window.location.href = "/orders"}>
+                                View My Orders
+                            </Button>
                         </Card>
                     </div>
                 )}

@@ -10,6 +10,12 @@ export interface CreateOrderPayload {
     bank_code: string;
 }
 
+export interface CreateGroupBuyOrderPayload {
+    buyer_group_session_id: string;
+    address_id: string;
+    bank_code: string;
+}
+
 export interface CreateOrderResponse {
     id: string;
     order_number: string;
@@ -52,6 +58,25 @@ export function useCreateOrder() {
         onError: (error: any) => {
             console.error(error);
             toast.error("Failed to create order.", {
+                description: error.response?.data?.message || "Please try again.",
+            });
+        },
+    });
+}
+
+export function useCreateGroupBuyOrder() {
+    return useMutation<CreateOrderResponse, Error, CreateGroupBuyOrderPayload>({
+        mutationFn: async (payload) => {
+            const response = await apiClient.post("/user/orders/group-buy", payload);
+            return response.data.data;
+        },
+        onSuccess: (data) => {
+            console.log("Group buy order created:", data);
+            toast.success("Order created successfully!");
+        },
+        onError: (error: any) => {
+            console.error(error);
+            toast.error("Failed to create group buy order.", {
                 description: error.response?.data?.message || "Please try again.",
             });
         },
