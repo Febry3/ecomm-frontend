@@ -112,6 +112,7 @@ export default function GroupBuySessionPage() {
         },
         status: pageStatus,
         isOrganizer: user ? String(sessionDetails.organizer_user_id) === String(user.user_id || (user as any).id) : false,
+        currentTierId: currentTier?.id,
     }
 
     return <GroupBuySessionComponent session={mappedSession} userAddresses={addresses} />

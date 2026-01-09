@@ -140,7 +140,8 @@ export function GroupBuySessionComponent({ session, userAddresses }: GroupBuySes
             buyer_group_session_id: session.id,
             address_id: selectedAddress.address_id,
             bank_code: selectedBank,
-            cashback: cashbackAmount
+            cashback: cashbackAmount,
+            product_group_buy_tier_id: session.currentTierId
         }, {
             onSuccess: (data) => {
                 setOrderSuccess(data)

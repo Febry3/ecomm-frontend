@@ -7,8 +7,10 @@ import { ProfileSidebar } from "@/components/profile/profile-sidebar"
 import { useState } from "react"
 
 
+import { UserWallet } from "@/components/profile/user-wallet"
+
 export default function ProfilePage() {
-    const [activeSection, setActiveSection] = useState<"profile" | "address" | "password">("profile")
+    const [activeSection, setActiveSection] = useState<"profile" | "address" | "password" | "wallet">("profile")
 
     return (
         <div className="min-h-screen">
@@ -18,6 +20,7 @@ export default function ProfilePage() {
                     <ProfileSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
                     <div className="flex-1">
                         {activeSection === "profile" && <ProfileEdit />}
+                        {activeSection === "wallet" && <UserWallet />}
                         {activeSection === "address" && <AddressManagement />}
                         {activeSection === "password" && <ChangePassword />}
                     </div>

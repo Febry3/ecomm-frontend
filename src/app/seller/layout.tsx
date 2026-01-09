@@ -35,6 +35,7 @@ const navigation = [
     },
     { name: "Orders", href: "/seller/orders", icon: ShoppingCart },
     { name: "Group Buy", href: "/seller/group-buy", icon: Users },
+    { name: "Subscription", href: "/seller/subscription", icon: Star },
     { name: "Finance", href: "/seller/finance", icon: DollarSign },
     { name: "Reviews", href: "/seller/reviews", icon: Star },
     { name: "Settings", href: "/seller/settings", icon: Settings },

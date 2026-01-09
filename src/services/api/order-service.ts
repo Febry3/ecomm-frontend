@@ -15,6 +15,7 @@ export interface CreateGroupBuyOrderPayload {
     address_id: string;
     bank_code: string;
     cashback?: number;
+    product_group_buy_tier_id?: string;
 }
 
 export interface Order {

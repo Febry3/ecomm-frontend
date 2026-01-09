@@ -41,6 +41,7 @@ export interface GroupBuySession {
     }
     status: "cart" | "payment" | "success"
     isOrganizer?: boolean
+    currentTierId?: string
 }
 
 export interface ChangeGroupBuySessionStatusRequest {
