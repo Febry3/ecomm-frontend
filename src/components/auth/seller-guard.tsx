@@ -23,7 +23,16 @@ export default function SellerGuard({ children }: { children: React.ReactNode })
         } else if (user?.role !== "seller") {
             router.push("/seller/onboard");
         } else {
-            setIsChecking(false);
+            // Check Subscription
+            const validSubscriptions = ["plus", "extra", "enterprise"]; // 'extra' is the id in component, 'enterprise' might be consistent with user intent
+            const hasAccess = validSubscriptions.includes(user?.subscription || "");
+            const onSubscriptionPage = pathname === "/seller/subscription";
+
+            if (!hasAccess && !onSubscriptionPage) {
+                router.push("/seller/subscription");
+            } else {
+                setIsChecking(false);
+            }
         }
     }, [isAuthenticated, user, router, pathname]);
 

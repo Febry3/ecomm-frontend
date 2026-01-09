@@ -20,6 +20,8 @@ import {
     ChevronDown,
 } from "lucide-react"
 import SellerGuard from "@/components/auth/seller-guard"
+import { useAuthStore } from "@/stores/auth-store"
+
 
 const navigation = [
     { name: "Dashboard", href: "/seller", icon: LayoutDashboard },
@@ -42,6 +44,7 @@ const navigation = [
 ]
 
 export default function SellerLayout({ children }: { children: React.ReactNode }) {
+    const { user } = useAuthStore()
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [expandedItems, setExpandedItems] = useState<string[]>(["Products"])
     const pathname = usePathname()
@@ -58,6 +61,14 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
             prev.includes(itemName) ? prev.filter((name) => name !== itemName) : [...prev, itemName],
         )
     }
+
+    const validSubscriptions = ["plus", "extra", "enterprise"]
+    const hasAccess = validSubscriptions.includes(user?.subscription || "")
+
+    const filteredNavigation = navigation.filter((item) => {
+        if (hasAccess) return true
+        return item.name === "Subscription"
+    })
 
     return (
         <SellerGuard>
@@ -85,7 +96,7 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
                     </div>
 
                     <nav className="space-y-1 px-3 py-4">
-                        {navigation.map((item) => {
+                        {filteredNavigation.map((item) => {
                             const isActive = pathname === item.href
                             const hasSubmenu = item.submenu && item.submenu.length > 0
                             const isExpanded = expandedItems.includes(item.name)
