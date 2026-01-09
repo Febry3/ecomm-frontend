@@ -86,3 +86,18 @@ export function useUpdateSellerStore() {
         },
     });
 }
+
+export function useUpdateSellerSubscription() {
+    return useMutation({
+        mutationFn: async (subscription: string) => {
+            const response = await apiClient.patch("/seller/subscription", { subscription });
+            return response.data.data;
+        },
+        onSuccess: () => {
+            toast.success("Subscription updated successfully");
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || "Failed to update subscription");
+        },
+    });
+}

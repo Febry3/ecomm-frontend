@@ -5,6 +5,7 @@ export interface User {
     email: string;
     profile_url?: string;
     role: string;
+    subscription?: string;
 }
 
 export interface GoogleLoginResponse {

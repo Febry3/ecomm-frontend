@@ -17,7 +17,13 @@ export function useLogin() {
             return response.data.data;
         },
         onSuccess: (data) => {
-            setUser({ user_id: data.id, username: data.username, email: data.email, role: data.role });
+            setUser({
+                user_id: data.id,
+                username: data.username,
+                email: data.email,
+                role: data.role,
+                subscription: data.seller?.subscription
+            });
             setToken(data.access_token);
             toast("Login successfully");
             window.location.href = "/";
@@ -89,7 +95,9 @@ export function useGoogleLoginOrRegister() {
                 user_id: data.id,
                 profile_url: data.profile_url,
                 role: data.role,
-                seller_id: data.seller_id!
+                seller_id: data.seller_id!,
+                // @ts-ignore - response type definition doesn't fully match actual nested response yet
+                subscription: data.seller?.subscription
             });
             setToken(data.access_token);
             toast.success("Auth Success");

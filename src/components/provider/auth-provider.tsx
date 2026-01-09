@@ -24,8 +24,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
                 try {
                     const response = await apiClient.get('/user');
-                    const userData = response.data.data as User;
-                    setUser(userData);
+                    const userData = response.data.data;
+
+                    setUser({
+                        ...userData,
+                        subscription: userData.seller?.subscription,
+                        seller: undefined // Ensure full seller object is not stored
+                    });
                 } catch (error) {
                     clearAuth();
                     console.error('Failed to fetch user data:', error);

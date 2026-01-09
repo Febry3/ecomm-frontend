@@ -74,23 +74,23 @@ const plans: SubscriptionPlan[] = [
     }
 ]
 
+import { useUpdateSellerSubscription } from "@/services/api/seller-service"
+
 export function SellerSubscription() {
     const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
-    const [loading, setLoading] = useState(false)
+    const { mutate: updateSubscription, isPending: loading } = useUpdateSellerSubscription()
 
-    const handleUpgrade = async () => {
+    const handleUpgrade = () => {
         if (!selectedPlan) return
-        setLoading(true)
 
-        // Simulating API call
-        await new Promise(resolve => setTimeout(resolve, 1500))
-
-        toast.success("Upgrade Successful!", {
-            description: `You are now subscribed to the ${selectedPlan.name} plan.`
+        updateSubscription(selectedPlan.id, {
+            onSuccess: () => {
+                toast.success("Upgrade Successful!", {
+                    description: `You are now subscribed to the ${selectedPlan.name} plan.`
+                })
+                setSelectedPlan(null)
+            }
         })
-
-        setLoading(false)
-        setSelectedPlan(null)
     }
 
     return (
