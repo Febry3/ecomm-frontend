@@ -1,9 +1,8 @@
 "use client"
 
 import { useGetWallet } from "@/services/api/wallet-service"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Wallet, ArrowDownLeft, ArrowUpRight, History, Download } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import { Loader2, Wallet, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -28,7 +27,6 @@ export function UserWallet() {
 
     const handleWithdraw = (e: React.FormEvent) => {
         e.preventDefault()
-        // Mock API call
         console.log("Withdraw request:", { amount, bankName, accountNumber })
 
         toast.success("Withdrawal Request Submitted", {
