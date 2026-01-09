@@ -30,7 +30,7 @@ export default function Navbar() {
     const navLinks = [
         { href: "/categories", label: "Categories", hasDropdown: false },
         { href: "/deals", label: "Deals" },
-        { href: "/forum", label: "Forum" },
+        { href: "/forums", label: "Forum" },
         { href: "/about-us", label: "About us" },
     ];
 

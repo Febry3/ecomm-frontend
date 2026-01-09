@@ -64,7 +64,7 @@ export function useCreateProductWithImages() {
 export interface UpdateProductWithImagesParams {
     data: ProductRequest;
     newImages: File[];
-    existingImageIds: string[]; // IDs of existing images to keep
+    existingImageIds: string[]; 
     primaryImageIndex: number;
 }
 

@@ -241,6 +241,7 @@ export default function ProductPage() {
                             <Button
                                 className="h-14 bg-[#10b981] hover:bg-[#059669] text-white font-bold text-lg rounded-xl shadow-lg shadow-emerald-500/20"
                                 disabled={currentStock === 0}
+                                onClick={() => router.push(`/checkout?productId=${productId}&variantId=${selectedVariantId}&quantity=${quantity}`)}
                             >
                                 Buy Now
                             </Button>

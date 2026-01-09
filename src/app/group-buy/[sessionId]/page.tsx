@@ -32,7 +32,7 @@ export default function GroupBuySessionPage() {
     const discountPercentage = currentTier ? currentTier.discount_percentage : 0
     const discountAmount = currentPrice * (discountPercentage / 100)
     const discountedPrice = currentPrice - discountAmount
-    const deliveryCharges = 20000
+    const deliveryCharges = 0 // free for now
     const members = sessionDetails.members || []
 
     if (user) {
@@ -112,6 +112,7 @@ export default function GroupBuySessionPage() {
         },
         status: pageStatus,
         isOrganizer: user ? String(sessionDetails.organizer_user_id) === String(user.user_id || (user as any).id) : false,
+        currentTierId: currentTier?.id,
     }
 
     return <GroupBuySessionComponent session={mappedSession} userAddresses={addresses} />

@@ -12,6 +12,7 @@ export interface Address {
     province: string
     postal_code: string
     notes?: string
+    phone_number?: string
     is_default: boolean
     created_at?: string
     updated_at?: string

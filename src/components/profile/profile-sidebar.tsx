@@ -1,11 +1,11 @@
 "use client"
 
-import { User, MapPin, Lock } from 'lucide-react'
+import { User, MapPin, Lock, Wallet } from 'lucide-react'
 import { cn } from "@/lib/utils"
 
 interface ProfileSidebarProps {
-    activeSection: "profile" | "address" | "password"
-    onSectionChange: (section: "profile" | "address" | "password") => void
+    activeSection: "profile" | "address" | "password" | "wallet"
+    onSectionChange: (section: "profile" | "address" | "password" | "wallet") => void
 }
 
 export function ProfileSidebar({ activeSection, onSectionChange }: ProfileSidebarProps) {
@@ -15,6 +15,12 @@ export function ProfileSidebar({ activeSection, onSectionChange }: ProfileSideba
             label: "Profile",
             icon: User,
             description: "Edit your profile information",
+        },
+        {
+            id: "wallet" as const,
+            label: "Wallet",
+            icon: Wallet,
+            description: "My Balance & History",
         },
         {
             id: "address" as const,
