@@ -2,7 +2,17 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, Zap, Crown, Shield } from "lucide-react"
+import { Check, Zap, Crown, Shield, Loader2 } from "lucide-react"
+import { useState } from "react"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { toast } from "sonner"
 
 interface SubscriptionPlan {
     id: "free" | "plus" | "extra"
@@ -65,6 +75,24 @@ const plans: SubscriptionPlan[] = [
 ]
 
 export function SellerSubscription() {
+    const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
+    const [loading, setLoading] = useState(false)
+
+    const handleUpgrade = async () => {
+        if (!selectedPlan) return
+        setLoading(true)
+
+        // Simulating API call
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        toast.success("Upgrade Successful!", {
+            description: `You are now subscribed to the ${selectedPlan.name} plan.`
+        })
+
+        setLoading(false)
+        setSelectedPlan(null)
+    }
+
     return (
         <div className="space-y-6">
             <div className="text-center space-y-2 mb-10">
@@ -78,6 +106,7 @@ export function SellerSubscription() {
             <div className="grid md:grid-cols-3 gap-8">
                 {plans.map((plan) => {
                     const Icon = plan.icon
+                    const isFree = plan.id === "free"
                     return (
                         <Card
                             key={plan.id}
@@ -100,7 +129,7 @@ export function SellerSubscription() {
                                     <CardTitle className="text-xl">{plan.name}</CardTitle>
                                 </div>
                                 <div className="mb-2 flex flex-col items-start">
-                                    {plan.id !== "free" ? (
+                                    {!isFree ? (
                                         <div className="flex flex-col">
                                             <span className="text-lg text-muted-foreground line-through decoration-destructive decoration-2">
                                                 {plan.price}
@@ -138,14 +167,50 @@ export function SellerSubscription() {
                                     className="w-full"
                                     variant={plan.highlighted ? "default" : "outline"}
                                     size="lg"
+                                    disabled={isFree}
+                                    onClick={() => !isFree && setSelectedPlan(plan)}
                                 >
-                                    {plan.id === "free" ? "Current Plan" : "Claim Free Upgrade"}
+                                    {isFree ? "Current Plan" : "Claim Free Upgrade"}
                                 </Button>
                             </CardFooter>
                         </Card>
                     )
                 })}
             </div>
+
+            <Dialog open={!!selectedPlan} onOpenChange={(open) => !open && setSelectedPlan(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Upgrade</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to upgrade to the <span className="font-semibold text-primary">{selectedPlan?.name}</span> plan?
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4">
+                        <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
+                            <div className="space-y-1">
+                                <p className="font-medium">New Plan</p>
+                                <p className="text-sm text-muted-foreground">{selectedPlan?.description}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm line-through text-muted-foreground">{selectedPlan?.price}</p>
+                                <p className="font-bold text-primary">Free</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setSelectedPlan(null)} disabled={loading}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleUpgrade} disabled={loading}>
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm Upgrade
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
