@@ -82,8 +82,8 @@ export function SellerSubscription() {
                         <Card
                             key={plan.id}
                             className={`relative flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${plan.highlighted
-                                    ? "border-primary shadow-lg scale-105 z-10"
-                                    : "border-border"
+                                ? "border-primary shadow-lg scale-105 z-10"
+                                : "border-border"
                                 }`}
                         >
                             {plan.highlighted && (
@@ -99,8 +99,22 @@ export function SellerSubscription() {
                                     </div>
                                     <CardTitle className="text-xl">{plan.name}</CardTitle>
                                 </div>
-                                <div className="mb-2">
-                                    <span className="text-3xl font-bold">{plan.price}</span>
+                                <div className="mb-2 flex flex-col items-start">
+                                    {plan.id !== "free" ? (
+                                        <div className="flex flex-col">
+                                            <span className="text-lg text-muted-foreground line-through decoration-destructive decoration-2">
+                                                {plan.price}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-3xl font-bold text-primary">Free</span>
+                                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase tracking-wider">
+                                                    Limited Offer
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <span className="text-3xl font-bold">{plan.price}</span>
+                                    )}
                                 </div>
                                 <CardDescription>{plan.description}</CardDescription>
                             </CardHeader>
@@ -125,7 +139,7 @@ export function SellerSubscription() {
                                     variant={plan.highlighted ? "default" : "outline"}
                                     size="lg"
                                 >
-                                    {plan.price === "Free" ? "Current Plan" : "Upgrade Now"}
+                                    {plan.id === "free" ? "Current Plan" : "Claim Free Upgrade"}
                                 </Button>
                             </CardFooter>
                         </Card>
